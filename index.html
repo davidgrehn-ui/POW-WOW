@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="POW-WOW! – snöläget på Sveriges och Norges skidorter: nysnö, snödjup, vind och temperatur från SMHI, YR och MET Norge.">
+<meta name="apple-mobile-web-app-title" content="POW-WOW!">
+<meta name="theme-color" content="#eef3f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1418" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<title>POW-WOW!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bowlby+One&family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#eef3f8; --surface:#fcfcfb; --surface-2:#f4f7fa; --line:#dde4ec;
+  --ink:#0b0b0b; --ink-2:#52514e; --ink-3:#7c7b77;
+  --accent:#1c5cab;
+  --s-smhi:#2a78d6; --s-yr:#eb6834; --s-obs:#6b7a8c;
+  --t-max:#e34948; --t-min:#2a78d6;
+  --alert-bg:#fff4e5; --alert-line:#eda100; --alert-ink:#7a4b00;
+  --snow-bar:#86b6ef;
+  --shadow:0 1px 2px rgba(15,30,50,.06),0 6px 20px rgba(15,30,50,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme:dark;
+    --bg:#0f1418; --surface:#1a1a19; --surface-2:#22231f; --line:#33352f;
+    --ink:#f0efec; --ink-2:#c3c2b7; --ink-3:#8f8e86;
+    --accent:#86b6ef;
+    --s-smhi:#3987e5; --s-yr:#d95926; --s-obs:#9aa6b3;
+    --t-max:#e66767; --t-min:#3987e5;
+    --alert-bg:#2e2410; --alert-line:#c98500; --alert-ink:#f3d28c;
+    --snow-bar:#256abf;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0f1418; --surface:#1a1a19; --surface-2:#22231f; --line:#33352f;
+  --ink:#f0efec; --ink-2:#c3c2b7; --ink-3:#8f8e86;
+  --accent:#86b6ef;
+  --s-smhi:#3987e5; --s-yr:#d95926; --s-obs:#9aa6b3;
+  --t-max:#e66767; --t-min:#3987e5;
+  --alert-bg:#2e2410; --alert-line:#c98500; --alert-ink:#f3d28c;
+  --snow-bar:#256abf;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 60px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px}
+h1{font-family:Fraunces,Georgia,serif;font-size:34px;margin:0;letter-spacing:-.01em}
+h1.brand{display:flex;align-items:center;gap:12px;font-family:"Bowlby One",Fraunces,Georgia,serif;letter-spacing:.01em}
+h1.brand img{border-radius:12px;box-shadow:0 2px 8px rgba(11,31,77,.25)}
+.sub{color:var(--ink-2);margin-top:4px}
+.controls{display:flex;gap:8px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:3px}
+.seg button{border:0;background:none;color:var(--ink-2);font:500 13px Inter,sans-serif;padding:6px 11px;border-radius:7px;cursor:pointer}
+.seg button.on{background:var(--surface-2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.alerts{margin:0 0 20px;display:grid;gap:10px}
+.alert{display:flex;gap:12px;align-items:flex-start;background:var(--alert-bg);border:1px solid var(--alert-line);border-left-width:5px;border-radius:12px;padding:12px 16px;color:var(--alert-ink)}
+.alert b{color:var(--ink)}
+.alert .ic{font-size:20px;line-height:1}
+.ok{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px;color:var(--ink-2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px;box-shadow:var(--shadow);cursor:pointer;text-align:left;font:inherit;color:inherit;transition:transform .12s, border-color .12s;position:relative}
+.card:hover,.card:focus-visible{transform:translateY(-2px);border-color:var(--accent);outline:none}
+.card.hot{border-color:var(--alert-line);box-shadow:0 0 0 1px var(--alert-line),var(--shadow)}
+.card h3{margin:0;font-size:17px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.reg{font-size:12px;color:var(--ink-3);margin-top:1px}
+.badge{font-size:11px;font-weight:600;background:var(--alert-line);color:#1a1100;border-radius:99px;padding:2px 8px;white-space:nowrap}
+.big{display:flex;align-items:baseline;gap:6px;margin:12px 0 2px}
+.big .v{font-size:32px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.big .u{color:var(--ink-2);font-size:13px}
+.lbl{font-size:12px;color:var(--ink-3)}
+.meter{height:6px;background:var(--surface-2);border-radius:99px;margin:8px 0 10px;overflow:hidden;box-shadow:inset 0 0 0 1px var(--line);position:relative}
+.meter i{display:block;height:100%;background:var(--s-smhi);border-radius:99px}
+.spark{display:flex;align-items:flex-end;gap:2px;height:34px;margin:6px 0 10px}
+.spark span{flex:1;background:var(--snow-bar);border-radius:3px 3px 0 0;min-height:2px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;border-top:1px solid var(--line);padding-top:10px}
+.stats div{font-size:12px;color:var(--ink-3)}
+.stats b{display:block;font-size:14px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.src{display:flex;gap:10px;font-size:12px;color:var(--ink-2);margin-top:2px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:1px}
+/* detail */
+.overlay{position:fixed;inset:0;background:rgba(5,12,20,.55);display:none;align-items:flex-start;justify-content:center;padding:28px 14px;overflow:auto;z-index:10}
+.overlay.open{display:flex}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;max-width:1000px;width:100%;padding:22px 22px 26px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.ph{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.ph h2{font-family:Fraunces,Georgia,serif;margin:0;font-size:28px}
+.close{border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:10px;padding:6px 12px;font:500 14px Inter;cursor:pointer}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:16px 0 8px}
+.kpi{background:var(--surface-2);border-radius:12px;padding:10px 12px}
+.kpi .v{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--ink-3)}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px}
+@media (max-width:760px){.charts{grid-template-columns:1fr}}
+.ch h4{margin:0 0 2px;font-size:14px}
+.ch p{margin:0 0 8px;font-size:12px;color:var(--ink-3)}
+.ch .box{position:relative;height:230px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--ink-2);margin-bottom:6px}
+.legend .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
+.legend .ln{display:inline-block;width:16px;height:0;border-top:2px solid;margin-right:5px;vertical-align:3px}
+.legend .dash{border-top-style:dashed}
+.tblwrap{margin-top:18px;overflow:auto}
+details summary{cursor:pointer;color:var(--accent);font-weight:500;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:12.5px;margin-top:8px;font-variant-numeric:tabular-nums}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--ink-3);font-weight:600}
+tr.today td{border-bottom:2px solid var(--accent)}
+.foot{margin-top:28px;color:var(--ink-3);font-size:12.5px;line-height:1.6}
+.foot a{color:var(--accent)}
+.stn{font-size:12px;color:var(--ink-3);margin-top:12px}
+
+/* mobil */
+.wrap{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));padding-top:max(28px,env(safe-area-inset-top))}
+.card{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+@media (max-width:640px){
+  body{font-size:14px}
+  .wrap{padding:max(14px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+  header{flex-direction:column;align-items:stretch;gap:10px;margin-bottom:14px}
+  h1{font-size:28px}
+  .sub{font-size:12.5px}
+  .controls{flex-direction:column;gap:6px}
+  .seg{display:flex}
+  .seg button{flex:1;padding:8px 6px;font-size:13px}
+  .grid{grid-template-columns:1fr;gap:10px}
+  .card{padding:14px;border-radius:14px}
+  .card:hover{transform:none}
+  .big{margin-top:8px}
+  .big .v{font-size:28px}
+  .alert{padding:10px 12px;font-size:13.5px}
+  .overlay{padding:0}
+  .overlay.open{display:block;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .panel{border-radius:0;min-height:100%;box-shadow:none;max-width:none;border:0;
+    padding:calc(12px + env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) calc(28px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+  .ph{position:sticky;top:calc(-12px - env(safe-area-inset-top));background:var(--surface);z-index:2;padding:10px 0 8px;margin-top:-10px}
+  .ph h2{font-size:23px}
+  .close{padding:8px 14px;font-size:15px}
+  .kpis{grid-template-columns:1fr 1fr;gap:8px}
+  .kpi .v{font-size:19px}
+  .charts{gap:22px}
+  .ch .box{height:210px}
+  .foot{font-size:12px}
+}
+body.locked{overflow:hidden}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 class="brand"><img src="icon-192.png" alt="" width="52" height="52">POW-WOW!</h1>
+      <div class="sub" id="sub"></div>
+    </div>
+    <div class="controls">
+      <div class="seg" id="sort">
+        <button data-k="geo" class="on">Norr → söder</button>
+        <button data-k="snow">Mest nysnö</button>
+        <button data-k="depth">Snödjup</button>
+      </div>
+      <div class="seg" id="theme">
+        <button data-t="auto" class="on">Auto</button><button data-t="light">Ljust</button><button data-t="dark">Mörkt</button>
+      </div>
+    </div>
+  </header>
+  <div class="alerts" id="alerts"></div>
+  <div class="grid" id="grid"></div>
+  <div class="foot" id="foot"></div>
+</div>
+<div class="overlay" id="ov" role="dialog" aria-modal="true"><div class="panel" id="panel"></div></div>
+<script>
+(async()=>{
+let DATA;
+try{ DATA = await (await fetch('data.json',{cache:'no-store'})).json(); }
+catch(e){ document.getElementById('grid').innerHTML='<div class="ok">Kunde inte läsa väderdatan. Ladda om sidan.</div>'; return; }
+const LIMIT = 30;
+const META = {
+ "Riksgränsen":["Lappland","riksgransen"],"Björkliden":["Lappland","bjorkliden"],"Abisko":["Lappland","abisko"],
+ "Galtispouda":["Arjeplog","galtispouda"],"Hemavan":["Västerbotten","hemavan"],"Tärnaby":["Västerbotten","tarnaby"],"Kittelfjäll":["Västerbotten","kittelfjall"],
+ "Åre":["Jämtland","are"],"Örnsköldsvik":["Ångermanland","ornskoldsvik"],"Söderbodan (Östanbäck)":["Skellefteå","soderbodan"],"Ramundberget":["Härjedalen","ramundberget"],
+ "Funäsdalen":["Härjedalen","funasdalen"],"Tänndalen":["Härjedalen","tanndalen"],"Tännäskröket":["Härjedalen","tannaskroket"],
+ "Sundsvall":["Medelpad","sundsvall"],"Järvsö":["Hälsingland","jarvso"],"Sälen":["Dalarna","salen"],"Romme":["Dalarna","romme"],"Idre":["Dalarna","idre"],"Trysil":["Norge · Innlandet","trysil"],"Hemsedal":["Norge · Buskerud","hemsedal"],"Kungsberget":["Gästrikland","kungsberget"],"Flottsbro":["Stockholm","flottsbro"]
+};
+const GEO = ["Riksgränsen", "Björkliden", "Abisko", "Galtispouda", "Hemavan", "Tärnaby", "Kittelfjäll", "Söderbodan (Östanbäck)", "Åre", "Örnsköldsvik", "Ramundberget", "Funäsdalen", "Tänndalen", "Tännäskröket", "Sundsvall", "Idre", "Järvsö", "Trysil", "Sälen", "Hemsedal", "Kungsberget", "Romme", "Flottsbro"];
+const sum = a => (a||[]).reduce((s,d)=>s+(d?d[0]||0:0),0);
+const fmt = (x,d=0) => x==null||isNaN(x)?'–':x.toLocaleString('sv-SE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const wd = s => new Date(s+'T12:00:00Z').toLocaleDateString('sv-SE',{weekday:'short',day:'numeric',month:'numeric',timeZone:'UTC'}).replace('.','');
+const lastVal = a => { if(!a) return null; for(let i=a.length-1;i>=0;i--) if(a[i]!=null) return {v:a[i],i}; return null; };
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+
+// --- Live-uppdatering av prognoser (SMHI + YR) direkt i webbläsaren om datan är äldre än 3 h ---
+const COORD={"Riksgränsen":[68.426,18.125],"Björkliden":[68.408,18.680],"Abisko":[68.349,18.831],"Galtispouda":[66.070,17.820],"Hemavan":[65.816,15.093],"Tärnaby":[65.716,15.262],"Kittelfjäll":[65.255,15.517],"Söderbodan (Östanbäck)":[64.867,21.100],"Åre":[63.399,13.081],"Örnsköldsvik":[63.290,18.716],"Ramundberget":[62.700,12.395],"Funäsdalen":[62.538,12.545],"Tänndalen":[62.525,12.325],"Tännäskröket":[62.470,12.470],"Sundsvall":[62.391,17.307],"Idre":[61.890,12.700],"Järvsö":[61.712,16.155],"Trysil":[61.311,12.210],"Sälen":[61.160,13.230],"Hemsedal":[60.858,8.535],"Kungsberget":[60.775,16.475],"Romme":[60.393,15.380],"Flottsbro":[59.236,17.888]};
+let LIVE=null;
+async function liveRefresh(){
+  const tz='Europe/Stockholm', dstr=d=>new Date(d).toLocaleDateString('sv-SE',{timeZone:tz});
+  const today=dstr(Date.now()); const addDays=(s,n)=>{const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+  const FD=[...Array(10)].map((_,i)=>addDays(today,i+1));
+  const r1=x=>x==null||!isFinite(x)?null:Math.round(x*10)/10;
+  const J=async u=>{try{const r=await fetch(u);return r.ok?await r.json():null}catch(e){return null}};
+  const E=()=>({tn:null,tx:null,w:null,g:null,p:0,s:0});
+  async function smhi(lat,lon){const j=await J(`https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${lon}/lat/${lat}/data.json`);if(!j)return null;
+    const days=Object.fromEntries(FD.map(d=>[d,E()]));
+    for(const t of j.timeSeries){const dd=t.data,end=Date.parse(t.time),st=Date.parse(t.intervalParametersStartTime||t.time);const D=days[dstr((st+end)/2)];if(!D)continue;const T=dd.air_temperature;
+      if(T!=null){D.tn=D.tn==null?T:Math.min(D.tn,T);D.tx=D.tx==null?T:Math.max(D.tx,T)}
+      if(dd.wind_speed!=null)D.w=Math.max(D.w??0,dd.wind_speed);if(dd.wind_speed_of_gust!=null)D.g=Math.max(D.g??0,dd.wind_speed_of_gust);
+      const p=Math.max(0,dd.precipitation_amount_mean??0);D.p+=p;let f=dd.precipitation_frozen_part;f=(f==null||f<0)?(T<=0.5?1:T>=2?0:(2-T)/1.5):f/100;D.s+=p*f;}
+    return FD.map(d=>{const D=days[d];return [r1(D.s),r1(D.p),r1(D.tn),r1(D.tx),r1(D.w),r1(D.g)]});}
+  async function yr(lat,lon){const j=await J(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}`);if(!j)return null;
+    const ts=j.properties.timeseries,days=Object.fromEntries(FD.map(d=>[d,E()]));let covered=0;
+    for(let i=0;i<ts.length;i++){const t=ts[i],tm=Date.parse(t.time),nx=i+1<ts.length?Date.parse(ts[i+1].time):tm+6*3600e3;const inst=t.data.instant.details;const D=days[dstr(tm)];
+      if(D){const T=inst.air_temperature;D.tn=D.tn==null?T:Math.min(D.tn,T);D.tx=D.tx==null?T:Math.max(D.tx,T);D.w=Math.max(D.w??0,inst.wind_speed??0);if(inst.wind_speed_of_gust!=null)D.g=Math.max(D.g??0,inst.wind_speed_of_gust);}
+      if(tm<covered)continue;let p=null,len=0;
+      if(nx-tm<=3600e3&&t.data.next_1_hours){p=t.data.next_1_hours.details.precipitation_amount;len=1}else if(t.data.next_6_hours){p=t.data.next_6_hours.details.precipitation_amount;len=6}
+      if(p==null)continue;covered=tm+len*3600e3;const Dp=days[dstr(tm+len*1800e3)];if(!Dp)continue;const T=inst.air_temperature,f=T<=0.5?1:T>=2?0:(2-T)/1.5;Dp.p+=p;Dp.s+=p*f;}
+    return FD.map(d=>{const D=days[d];return D.tn==null?null:[r1(D.s),r1(D.p),r1(D.tn),r1(D.tx),r1(D.w),r1(D.g)]});}
+  const res=await Promise.all(DATA.loc.map(async l=>{const c=COORD[l.n];if(!c)return [null,null];return Promise.all([smhi(c[0],c[1]),yr(c[0],c[1])]);}));
+  let ok=0; res.forEach(([s,y],i)=>{if(s){DATA.loc[i].smhi=s;ok++} if(y)DATA.loc[i].yr=y;});
+  if(ok>DATA.loc.length/2){ DATA.FD=FD; LIVE=new Date(); }
+}
+const ageH=(Date.now()-Date.parse(DATA.gen))/36e5;
+if(ageH>3){ document.getElementById('grid').innerHTML='<div class="ok">Hämtar senaste prognoserna från SMHI och YR…</div>'; await Promise.race([liveRefresh(), new Promise(r=>setTimeout(r,12000))]); }
+const L = DATA.loc.map(l => {
+  const s = sum(l.smhi), y = sum(l.yr);
+  const sd = lastVal(l.obs.sd && l.obs.sd.v);
+  const f = l.smhi||l.yr;
+  const tmin = Math.min(...f.filter(Boolean).map(d=>d[2])), tmax = Math.max(...f.filter(Boolean).map(d=>d[3]));
+  const wmax = Math.max(...f.filter(Boolean).map(d=>d[4]));
+  const gmax = Math.max(...(l.smhi||[]).map(d=>d[5]||0));
+  return {...l, s10:s, y10:y, best:Math.max(s,y), sd, tmin, tmax, wmax, gmax, reg:META[l.n]?.[0]||'', id:META[l.n]?.[1]||l.n};
+});
+
+document.getElementById('sub').textContent =
+  `Prognos ${wd(DATA.FD[0])} – ${wd(DATA.FD[9])} · ${LIVE?`prognos live ${LIVE.toLocaleTimeString('sv-SE',{hour:'2-digit',minute:'2-digit'})} · mätdata`:'uppdaterad'} ${new Date(DATA.gen).toLocaleString('sv-SE',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/Stockholm'})} · källor SMHI, YR & MET Norge`;
+
+// alerts
+const hot = L.filter(l=>l.best>LIMIT).sort((a,b)=>b.best-a.best);
+document.getElementById('alerts').innerHTML = hot.length
+  ? hot.map(l=>`<div class="alert"><div class="ic">⚠️</div><div><b>${l.n}</b> väntas få <b>${fmt(l.best)} cm</b> snö kommande 10 dagar (SMHI ${fmt(l.s10)} cm · YR ${fmt(l.y10)} cm).</div></div>`).join('')
+  : `<div class="ok">Ingen ort väntas få mer än ${LIMIT} cm snö de kommande 10 dagarna. Mest snö: <b>${[...L].sort((a,b)=>b.best-a.best)[0].n}</b> (${fmt([...L].sort((a,b)=>b.best-a.best)[0].best)} cm).</div>`;
+
+let sortKey = 'geo';
+function render(){
+  const arr = [...L];
+  if(sortKey==='geo') arr.sort((a,b)=>GEO.indexOf(a.n)-GEO.indexOf(b.n));
+  if(sortKey==='snow') arr.sort((a,b)=>b.best-a.best);
+  if(sortKey==='depth') arr.sort((a,b)=>(b.sd?.v??-1)-(a.sd?.v??-1));
+  
+  document.getElementById('grid').innerHTML = arr.map(l=>{
+    const pct = Math.min(100, l.best/LIMIT*100);
+    const maxDay = Math.max(8,...(l.smhi||[]).map(d=>d[0]));
+    const bars = (l.smhi||[]).map((d,i)=>`<span style="height:${Math.max(4,d[0]/maxDay*100)}%" title="${wd(DATA.FD[i])}: ${fmt(d[0],1)} cm"></span>`).join('');
+    return `<button class="card ${l.best>LIMIT?'hot':''}" data-id="${l.id}" aria-label="Visa detaljer för ${l.n}">
+      <h3>${l.n}${l.best>LIMIT?'<span class="badge">&gt; 30 cm</span>':''}</h3>
+      <div class="reg">${l.reg}</div>
+      <div class="big"><span class="v">${fmt(l.s10)}</span><span class="u">cm nysnö / 10 d (SMHI)</span></div>
+      <div class="src"><span><i class="dot" style="background:var(--s-smhi)"></i>SMHI ${fmt(l.s10,1)}</span><span><i class="dot" style="background:var(--s-yr)"></i>YR ${fmt(l.y10,1)}</span></div>
+      <div class="meter" title="Andel av larmgränsen ${LIMIT} cm"><i style="width:${pct}%"></i></div>
+      <div class="lbl">Snöfall per dag, kommande 10 dagar</div>
+      <div class="spark">${bars}</div>
+      <div class="stats">
+        <div>Snödjup<b>${l.sd?fmt(l.sd.v)+' cm':'–'}</b></div>
+        <div>Temp<b>${fmt(l.tmin)}…${fmt(l.tmax)}°</b></div>
+        <div>Vind max<b>${fmt(l.wmax)} m/s</b></div>
+      </div>
+    </button>`;
+  }).join('');
+}
+render();
+document.getElementById('sort').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  sortKey=b.dataset.k; [...e.currentTarget.children].forEach(x=>x.classList.toggle('on',x===b)); render();
+});
+document.getElementById('grid').addEventListener('click',e=>{
+  const c=e.target.closest('.card'); if(c) location.hash=c.dataset.id;
+});
+// theme
+function setTheme(t){
+  if(t==='auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme',t);
+  [...document.querySelectorAll('#theme button')].forEach(x=>x.classList.toggle('on',x.dataset.t===t));
+  try{localStorage.setItem('snoTheme',t)}catch(e){}
+  if(current) openDetail(current);
+}
+document.getElementById('theme').addEventListener('click',e=>{const b=e.target.closest('button'); if(b) setTheme(b.dataset.t)});
+try{const t=localStorage.getItem('snoTheme'); if(t&&t!=='auto') setTheme(t)}catch(e){}
+
+// detail
+let charts=[], current=null;
+const ov=document.getElementById('ov'), panel=document.getElementById('panel');
+function closeDetail(){ if(location.hash){ try{history.replaceState(null,'',location.pathname+location.search)}catch(e){} } ov.classList.remove('open'); document.body.classList.remove('locked'); charts.forEach(c=>c.destroy()); charts=[]; current=null; }
+ov.addEventListener('click',e=>{ if(e.target===ov) closeDetail(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDetail(); });
+window.addEventListener('hashchange',route);
+function route(){ const id=location.hash.slice(1); const l=L.find(x=>x.id===id); if(l) openDetail(l); else if(current){ ov.classList.remove('open'); document.body.classList.remove('locked'); charts.forEach(c=>c.destroy()); charts=[]; current=null; } }
+
+function openDetail(l){
+  current=l; charts.forEach(c=>c.destroy()); charts=[];
+  const labels=[...DATA.PD,...DATA.FD].map(wd);
+  const N=10, nul=Array(N).fill(null);
+  const o=l.obs, sm=l.smhi||[], yr=l.yr||[];
+  const col = k => (o[k]&&o[k].v)||nul;
+  const F = (src,i)=>src.map(d=>d?d[i]:null);
+  const st = k => o[k]?`${o[k].st} (${o[k].km} km)`:'ingen mätstation i närheten';
+  const pastSnow = col('p').map((p,i)=>p==null?null:((col('tx')[i]??5)<=1?p:((col('tn')[i]??5)<=-1&&(col('tx')[i]??5)<=4?p*0.5:0)));
+  panel.innerHTML = `
+    <div class="ph"><div><h2>${l.n}</h2><div class="reg">${l.reg} · ${wd(DATA.PD[0])} – ${wd(DATA.FD[9])}</div></div><button class="close" id="cl">Stäng ✕</button></div>
+    ${l.best>LIMIT?`<div class="alert" style="margin-top:14px"><div class="ic">⚠️</div><div>Mer än ${LIMIT} cm snö väntas de kommande 10 dagarna.</div></div>`:''}
+    <div class="kpis">
+      <div class="kpi"><div class="v">${l.sd?fmt(l.sd.v)+' cm':'–'}</div><div class="l">Snödjup senast uppmätt${l.sd?' ('+wd(DATA.PD[l.sd.i])+')':''}</div></div>
+      <div class="kpi"><div class="v">${fmt(l.s10)} / ${fmt(l.y10)} cm</div><div class="l">Nysnö 10 d · SMHI / YR</div></div>
+      <div class="kpi"><div class="v">${fmt(l.tmin)}…${fmt(l.tmax)}°</div><div class="l">Temperatur kommande 10 d</div></div>
+      <div class="kpi"><div class="v">${fmt(l.wmax)} m/s</div><div class="l">Max medelvind (byar ${fmt(l.gmax)} m/s)</div></div>
+    </div>
+    <div class="charts">
+      <div class="ch"><h4>Snöfall per dag</h4><p>Historik: närmaste mätstation, uppskattat från nederbörd och temperatur. Prognos: SMHI och YR.</p>
+        <div class="legend"><span><i class="sw" style="background:var(--s-obs)"></i>Uppmätt</span><span><i class="sw" style="background:var(--s-smhi)"></i>SMHI</span><span><i class="sw" style="background:var(--s-yr)"></i>YR</span></div>
+        <div class="box"><canvas id="c1"></canvas></div></div>
+      <div class="ch"><h4>Snödjup</h4><p>${o.sd?`Uppmätt vid ${st('sd')}. Prognosdelen visar ackumulerad nysnö ovanpå senaste mätning (utan hänsyn till sättning).`:'Ingen mätstation i närheten. Kurvan visar enbart ackumulerad nysnö enligt prognos.'}</p>
+        <div class="legend"><span><i class="ln" style="border-color:var(--s-obs)"></i>Uppmätt</span><span><i class="ln dash" style="border-color:var(--s-smhi)"></i>+ SMHI-prognos</span><span><i class="ln dash" style="border-color:var(--s-yr)"></i>+ YR-prognos</span></div>
+        <div class="box"><canvas id="c2"></canvas></div></div>
+      <div class="ch"><h4>Temperatur (°C)</h4><p>Dygnets max och min. Historik: ${st('tx')}.</p>
+        <div class="legend"><span><i class="ln" style="border-color:var(--t-max)"></i>Max</span><span><i class="ln" style="border-color:var(--t-min)"></i>Min</span><span><i class="ln dash" style="border-color:var(--ink-3)"></i>YR (streckad)</span></div>
+        <div class="box"><canvas id="c3"></canvas></div></div>
+      <div class="ch"><h4>Vind (m/s)</h4><p>Högsta medelvind per dygn. Historik: ${st('w')}.</p>
+        <div class="legend"><span><i class="ln" style="border-color:var(--s-obs)"></i>Uppmätt</span><span><i class="ln" style="border-color:var(--s-smhi)"></i>SMHI</span><span><i class="ln dash" style="border-color:var(--s-smhi)"></i>SMHI byar</span><span><i class="ln" style="border-color:var(--s-yr)"></i>YR</span></div>
+        <div class="box"><canvas id="c4"></canvas></div></div>
+    </div>
+    <div class="tblwrap"><details><summary>Visa som tabell</summary>
+      <table><thead><tr><th>Dag</th><th>Snödjup</th><th>Nederbörd mm</th><th>Snö SMHI</th><th>Snö YR</th><th>Min °C</th><th>Max °C</th><th>Vind m/s</th><th>Byar</th></tr></thead><tbody>
+      ${DATA.PD.map((d,i)=>`<tr class="${i===9?'today':''}"><td>${wd(d)} (uppmätt)</td><td>${fmt(col('sd')[i])}</td><td>${fmt(col('p')[i],1)}</td><td>–</td><td>–</td><td>${fmt(col('tn')[i],1)}</td><td>${fmt(col('tx')[i],1)}</td><td>${fmt(col('w')[i],1)}</td><td>–</td></tr>`).join('')}
+      ${DATA.FD.map((d,i)=>`<tr><td>${wd(d)}</td><td>–</td><td>${fmt(sm[i]?.[1],1)}</td><td>${fmt(sm[i]?.[0],1)}</td><td>${fmt(yr[i]?.[0],1)}</td><td>${fmt(sm[i]?.[2],1)}</td><td>${fmt(sm[i]?.[3],1)}</td><td>${fmt(sm[i]?.[4],1)}</td><td>${fmt(sm[i]?.[5],1)}</td></tr>`).join('')}
+      </tbody></table></details></div>
+    <div class="stn">Mätstationer: snödjup ${st('sd')} · nederbörd ${st('p')} · temperatur ${st('tn')} · vind ${st('w')}.</div>`;
+  document.getElementById('cl').onclick=closeDetail;
+  ov.classList.add('open'); document.body.classList.add('locked'); ov.scrollTop=0;
+
+  const ink2=css('--ink-2'), ink3=css('--ink-3'), line=css('--line'), cS=css('--s-smhi'), cY=css('--s-yr'), cO=css('--s-obs'), cMax=css('--t-max'), cMin=css('--t-min'), acc=css('--accent');
+  Chart.defaults.font.family='Inter, system-ui, sans-serif'; Chart.defaults.font.size=11; Chart.defaults.color=ink2;
+  const todayLine = {id:'today',afterDatasetsDraw(c){const x=c.scales.x; const px=(x.getPixelForValue(9)+x.getPixelForValue(10))/2; const {top,bottom}=c.chartArea; const g=c.ctx; g.save(); g.strokeStyle=acc; g.setLineDash([4,4]); g.lineWidth=1.5; g.beginPath(); g.moveTo(px,top); g.lineTo(px,bottom); g.stroke(); g.setLineDash([]); g.fillStyle=acc; g.font='600 11px Inter'; g.textAlign='left'; g.fillText('Prognos →',px+5,top+11); g.textAlign='right'; g.fillText('← Historik',px-5,top+11); g.restore();}};
+  const base = (unit, beginAtZero=true) => ({responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+    layout:{padding:{top:14}},
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw==null?null:`${c.dataset.label}: ${fmt(c.raw,1)} ${unit}`}}},
+    scales:{x:{grid:{display:false},ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:10,color:ink3},border:{color:line}},
+            y:{beginAtZero,grid:{color:line},border:{display:false},ticks:{color:ink3,callback:v=>v+(unit==='°C'?'°':'')}}}});
+  const bar=(label,data,color)=>({type:'bar',label,data,backgroundColor:color,borderRadius:{topLeft:4,topRight:4},borderSkipped:'bottom',maxBarThickness:14,categoryPercentage:.8,barPercentage:.9,skipNull:true});
+  const lineDs=(label,data,color,dash,o={})=>({type:'line',label,data,borderColor:color,backgroundColor:color,borderWidth:2,pointRadius:0,pointHoverRadius:4,borderDash:dash?[5,4]:[],spanGaps:true,tension:.25,...o});
+
+  charts.push(new Chart(document.getElementById('c1'),{type:'bar',data:{labels,datasets:[
+    bar('Uppmätt (cm)',[...pastSnow.map(x=>x==null?null:Math.round(x*10)/10),...nul],cO),
+    bar('SMHI (cm)',[...nul,...F(sm,0)],cS), bar('YR (cm)',[...nul,...F(yr,0)],cY)]},
+    options:{...base('cm'),scales:{...base('cm').scales,x:{...base('cm').scales.x,stacked:false}}},plugins:[todayLine]}));
+
+  const sdv=col('sd'); const last=l.sd?l.sd.v:0;
+  const acc1=(src)=>{let a=last; return src.map(d=>{ if(a==null) return null; a+= (d?d[0]:0); return Math.round(a*10)/10;});};
+  const bridge = arr => { const r=[...nul,...arr]; if(last!=null) r[9]=last; return r; };
+  charts.push(new Chart(document.getElementById('c2'),{data:{labels,datasets:[
+    lineDs('Uppmätt',[...sdv,...nul],cO,false,{pointRadius:3}),
+    lineDs('+ SMHI',bridge(acc1(sm)),cS,true), lineDs('+ YR',bridge(acc1(yr)),cY,true)]},
+    options:base('cm'),plugins:[todayLine]}));
+
+  charts.push(new Chart(document.getElementById('c3'),{data:{labels,datasets:[
+    lineDs('Max',[...col('tx'),...F(sm,3)],cMax,false), lineDs('Min',[...col('tn'),...F(sm,2)],cMin,false),
+    lineDs('YR max',[...nul,...F(yr,3)],cMax,true,{borderWidth:1.5}), lineDs('YR min',[...nul,...F(yr,2)],cMin,true,{borderWidth:1.5})]},
+    options:base('°C',false),plugins:[todayLine,{id:'zero',beforeDatasetsDraw(c){const y=c.scales.y.getPixelForValue(0);const {left,right}=c.chartArea;if(y<c.chartArea.top||y>c.chartArea.bottom)return;const g=c.ctx;g.save();g.strokeStyle=ink3;g.lineWidth=1;g.beginPath();g.moveTo(left,y);g.lineTo(right,y);g.stroke();g.restore();}}]}));
+
+  charts.push(new Chart(document.getElementById('c4'),{data:{labels,datasets:[
+    lineDs('Uppmätt',[...col('w'),...nul],cO,false), lineDs('SMHI',[...nul,...F(sm,4)],cS,false),
+    lineDs('SMHI byar',[...nul,...F(sm,5)],cS,true,{borderWidth:1.5}), lineDs('YR',[...nul,...F(yr,4)],cY,false)]},
+    options:base('m/s'),plugins:[todayLine]}));
+}
+route();
+window.__render=render;
+document.getElementById('foot').innerHTML = `
+  <b>Om datan.</b> Prognoser: SMHI <i>snow1g</i> punktprognos och YR/met.no <i>Locationforecast 2.0</i>, summerade per dygn (svensk tid).
+  Nysnö räknas som nederbörd i fast form, 1 mm vatten ≈ 1 cm snö (SMHI anger andel fast nederbörd; för YR används temperaturen).
+  Faktisk nysnö kan bli mer i kallt, torrt väder och mindre i blöt snö. Historik och snödjup kommer från närmaste aktiva SMHI-station, för Trysil och Hemsedal från MET Norges stationer (Frost API)
+  – stationerna kan ligga en bit från skidområdet och lägre i terrängen. Larmgräns: över ${LIMIT} cm enligt SMHI eller YR under 10 dagar.
+  Klicka på en ort för grafer. Källor: <a href="https://www.smhi.se/data" target="_blank" rel="noopener">SMHI Öppna data</a> ·
+  <a href="https://www.yr.no" target="_blank" rel="noopener">YR (met.no)</a>.`;
+})();
+</script>
+</body>
+</html>
