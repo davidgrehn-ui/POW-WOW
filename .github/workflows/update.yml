@@ -1,0 +1,30 @@
+name: Uppdatera snödata
+on:
+  schedule:
+    - cron: '41 5,10,15,20 * * *'   # 06:41, 11:41, 16:41, 21:41 svensk vintertid
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Hämta data
+        env:
+          FROST_CLIENT_ID: ${{ secrets.FROST_CLIENT_ID }}
+        run: node scripts/update.mjs
+      - name: Spara data.json
+        run: |
+          git config user.name "POW-WOW bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          git diff --cached --quiet || git commit -m "Uppdatera snödata"
+          git push
