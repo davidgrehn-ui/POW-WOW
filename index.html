@@ -68,7 +68,7 @@ h1.brand img{border-radius:12px;box-shadow:0 2px 8px rgba(11,31,77,.25)}
 .src{display:flex;gap:10px;font-size:12px;color:var(--ink-2);margin-top:2px}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:1px}
 /* detail */
-.overlay{position:fixed;inset:0;background:rgba(5,12,20,.55);display:none;align-items:flex-start;justify-content:center;padding:28px 14px;overflow:auto;z-index:10}
+.overlay{position:fixed;inset:0;background:rgba(5,12,20,.55);display:none;align-items:flex-start;justify-content:center;padding:28px 14px;overflow:auto;z-index:5000}
 .overlay.open{display:flex}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;max-width:1000px;width:100%;padding:22px 22px 26px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
 .ph{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
@@ -793,7 +793,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 	}
 
 /* --- karta / startskärm --- */
-#hero{position:relative;height:100vh;height:100svh;min-height:520px;background:#cfe1f3;overflow:hidden}
+#hero{position:relative;isolation:isolate;height:100vh;height:100svh;min-height:520px;background:#cfe1f3;overflow:hidden}
 #map{position:absolute;inset:0 0 calc(80px + env(safe-area-inset-bottom)) 0;background:#cfe1f3;font:inherit}
 .leaflet-container{background:#cfe1f3;font-family:Inter,system-ui,sans-serif}
 .hero-top{position:absolute;left:0;right:0;top:0;z-index:500;pointer-events:none;
@@ -806,6 +806,12 @@ svg.leaflet-image-layer.leaflet-interactive path {
 .chip{display:inline-flex;align-items:center;gap:6px;background:#ffd23f;color:#1a1100;font-weight:600;font-size:12.5px;border-radius:99px;padding:5px 11px;border:0;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .chip.calm{background:rgba(255,255,255,.18);color:#fff;font-weight:500;cursor:default;box-shadow:none}
 .map-legend{position:absolute;left:max(10px,env(safe-area-inset-left));bottom:calc(100px + env(safe-area-inset-bottom));z-index:500;background:rgba(255,255,255,.92);border-radius:10px;padding:6px 9px;font-size:11px;color:#333;display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.12);max-width:calc(100% - 20px)}
+.map-legend{flex-direction:column;align-items:flex-start;gap:4px}
+.map-legend .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.map-legend .sq{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:3px;vertical-align:-1px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
+.map-legend .tg{font:inherit;font-weight:700;border:0;background:#0b1f4d;color:#fff;border-radius:999px;padding:3px 9px;cursor:pointer}
+.map-legend .tg[aria-pressed="false"]{background:#e3e8ef;color:#334}
+.map-legend.sd-off .sdrow{display:none}
 .map-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;vertical-align:-1px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
 .hero-handle{position:absolute;left:0;right:0;bottom:0;height:calc(92px + env(safe-area-inset-bottom));z-index:600;border:0;background:var(--bg);
   display:flex;align-items:flex-start;justify-content:center;cursor:pointer;padding:14px 16px calc(14px + env(safe-area-inset-bottom));
@@ -838,7 +844,10 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div class="hero-sub" id="sub"></div>
     <div id="heroAlert"></div>
   </div>
-  <div class="map-legend" aria-hidden="true"><b>Nysnö 10 d</b><span><i style="background:#dbe9fb"></i>&lt;5</span><span><i style="background:#86b6ef"></i>5–15</span><span><i style="background:#2a78d6"></i>15–30</span><span><i style="background:#eb6834"></i>&gt;30 cm</span></div>
+  <div class="map-legend" id="mapLegend">
+    <div class="row"><button class="tg" id="sdToggle" type="button" aria-pressed="true">Snödjup</button><span class="sdrow row"><span><i class="sq" style="background:#6dbb5f"></i>Barmark</span><span><i class="sq" style="background:#ffffff"></i>0–30</span><span><i class="sq" style="background:#a8d3f5"></i>30–50</span><span><i class="sq" style="background:#4a8fdb"></i>50–75</span><span><i class="sq" style="background:#1d3f96"></i>75–100</span><span><i class="sq" style="background:#8d3fb0"></i>&gt;100 cm</span></span></div>
+    <div class="row"><b>Nysnö 10 d</b><span><i style="background:#dbe9fb"></i>&lt;5</span><span><i style="background:#86b6ef"></i>5–15</span><span><i style="background:#2a78d6"></i>15–30</span><span><i style="background:#eb6834"></i>&gt;30 cm</span></div>
+  </div>
   <button class="hero-handle" id="toList" type="button"><span class="pill">Visa alla orter<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
 </section>
 <div class="wrap" id="list">
@@ -975,6 +984,38 @@ function snowColor(c){ return c>30?['#eb6834','#fff']:c>=15?['#2a78d6','#fff']:c
     let errs=0; tl.on('tileerror',()=>{ if(++errs>4 && map.hasLayer(tl)) map.removeLayer(tl); });
     tl.addTo(map);
   }
+  // --- Snödjup som färgade områden (rutnät från Open-Meteo, interpolerat och klippt mot Sverige + Norge) ---
+  const SG=DATA.sg;
+  if(SG&&SG.v){
+    map.createPane('snow'); const sp=map.getPane('snow'); sp.style.zIndex=250; sp.style.pointerEvents='none';
+    const SDC=[[0,[109,187,95]],[30,[255,255,255]],[50,[168,211,245]],[75,[74,143,219]],[100,[29,63,150]],[1e9,[141,63,176]]];
+    const col=cm=>{ if(cm<0.5) return SDC[0][1]; for(let i=1;i<SDC.length;i++) if(cm<=SDC[i][0]) return SDC[i][1]; return SDC[5][1]; };
+    const at=(la,lo)=>{
+      const fi=(la-SG.la0)/SG.dla, fj=(lo-SG.lo0)/SG.dlo, i0=Math.floor(fi), j0=Math.floor(fj), di=fi-i0, dj=fj-j0;
+      let s=0,w=0;
+      for(const [i,j,ww] of [[i0,j0,(1-di)*(1-dj)],[i0+1,j0,di*(1-dj)],[i0,j0+1,(1-di)*dj],[i0+1,j0+1,di*dj]]){
+        if(i<0||j<0||i>=SG.nla||j>=SG.nlo) continue; const v=SG.v[i*SG.nlo+j]; if(v==null) continue; s+=v*ww; w+=ww; }
+      return w>0.05?s/w:null;
+    };
+    const LAND=NORDIC.features.filter(f=>f.properties.c==='SE'||f.properties.c==='NO');
+    const SnowLayer=LF.GridLayer.extend({createTile(c){
+      const t=document.createElement('canvas'); t.width=t.height=256; const g=t.getContext('2d');
+      const B=2, img=g.createImageData(256,256), d=img.data, z=c.z, ox=c.x*256, oy=c.y*256;
+      for(let py=0;py<256;py+=B){ const ll0=map.unproject([ox,oy+py+B/2],z); 
+        for(let px=0;px<256;px+=B){ const ll=map.unproject([ox+px+B/2,oy+py+B/2],z); const v=at(ll0.lat,ll.lng); if(v==null) continue; const [r,gg,b]=col(v);
+          for(let yy=py;yy<py+B;yy++) for(let xx=px;xx<px+B;xx++){ const k=(yy*256+xx)*4; d[k]=r;d[k+1]=gg;d[k+2]=b;d[k+3]=255; } } }
+      g.putImageData(img,0,0);
+      g.globalCompositeOperation='destination-in'; g.beginPath();
+      for(const f of LAND) for(const poly of f.geometry.coordinates) for(const ring of poly){
+        ring.forEach(([lo,la],i)=>{ const p=map.project([la,lo],z); i?g.lineTo(p.x-ox,p.y-oy):g.moveTo(p.x-ox,p.y-oy); }); g.closePath(); }
+      g.fillStyle='#000'; g.fill('evenodd');
+      return t;
+    }});
+    const snowL=new SnowLayer({pane:'snow',opacity:0.6,updateWhenZooming:false,keepBuffer:1,
+      attribution:'Snödjup: <a href="https://open-meteo.com/">Open-Meteo</a>'}).addTo(map);
+    const tg=document.getElementById('sdToggle'), lg=document.getElementById('mapLegend');
+    tg.addEventListener('click',()=>{ const on=!map.hasLayer(snowL); on?snowL.addTo(map):map.removeLayer(snowL); tg.setAttribute('aria-pressed',on); lg.classList.toggle('sd-off',!on); });
+  } else { document.getElementById('sdToggle').closest('.row').style.display='none'; }
   const pts=[];
   for(const l of L_ALL){
     const c=COORD[l.n]; if(!c) continue; pts.push(c);
@@ -1095,7 +1136,7 @@ document.getElementById('foot').innerHTML = `
   Nysnö räknas som nederbörd i fast form, 1 mm vatten ≈ 1 cm snö (SMHI anger andel fast nederbörd; för YR används temperaturen).
   Faktisk nysnö kan bli mer i kallt, torrt väder och mindre i blöt snö. Historik och snödjup kommer från närmaste aktiva SMHI-station, för de norska orterna från MET Norges stationer (Frost API)
   – stationerna kan ligga en bit från skidområdet och lägre i terrängen. Larmgräns: över ${LIMIT} cm enligt SMHI eller YR under 10 dagar.
-  Klicka på en ort för grafer. Källor: <a href="https://www.smhi.se/data" target="_blank" rel="noopener">SMHI Öppna data</a> ·
+  Klicka på en ort för grafer. Källor: <a href="https://www.smhi.se/data" target="_blank" rel="noopener">SMHI Öppna data</a> · <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (snödjupskartan, modellberäknat i ca 25 km rutor) ·
   <a href="https://www.yr.no" target="_blank" rel="noopener">YR (met.no)</a>.`;
 })();
 </script>
