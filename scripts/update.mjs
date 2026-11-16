@@ -169,8 +169,9 @@ const LIMIT = 30;
 const tot = a => (a||[]).reduce((s,x)=>s+(x?x[0]||0:0),0);
 const alarmsOf = data => new Map((data?.loc||[]).map(l=>{const s=tot(l.smhi), y=tot(l.yr); return [l.n,{s,y,b:Math.max(s,y)}];}).filter(([,v])=>v.b>LIMIT));
 const now = alarmsOf(d), before = alarmsOf(prev);
-const hourSE = +new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Stockholm',hour:'2-digit',hour12:false}).format(new Date());
-const morning = hourSE < 9;
+// Dagens första körning (svensk tid) = morgonsammanfattning, även om GitHub startar jobbet sent.
+const dSE = t => new Date(t).toLocaleDateString('sv-SE',{timeZone:'Europe/Stockholm'});
+const morning = !prev?.gen || dSE(prev.gen) !== dSE(Date.now());
 const fresh = [...now.keys()].filter(n=>!before.has(n));
 const list = morning ? [...now.keys()] : fresh;
 if (list.length) {
