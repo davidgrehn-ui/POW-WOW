@@ -794,7 +794,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
 
 /* --- karta / startskärm --- */
 #hero{position:relative;height:100vh;height:100svh;min-height:520px;background:#cfe1f3;overflow:hidden}
-#map{position:absolute;inset:0 0 64px 0;background:#cfe1f3;font:inherit}
+#map{position:absolute;inset:0 0 calc(80px + env(safe-area-inset-bottom)) 0;background:#cfe1f3;font:inherit}
 .leaflet-container{background:#cfe1f3;font-family:Inter,system-ui,sans-serif}
 .hero-top{position:absolute;left:0;right:0;top:0;z-index:500;pointer-events:none;
   padding:calc(14px + env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 28px max(16px,env(safe-area-inset-left));
@@ -805,11 +805,15 @@ svg.leaflet-image-layer.leaflet-interactive path {
 #heroAlert{pointer-events:auto;margin-top:10px;display:flex;flex-wrap:wrap;gap:6px}
 .chip{display:inline-flex;align-items:center;gap:6px;background:#ffd23f;color:#1a1100;font-weight:600;font-size:12.5px;border-radius:99px;padding:5px 11px;border:0;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2)}
 .chip.calm{background:rgba(255,255,255,.18);color:#fff;font-weight:500;cursor:default;box-shadow:none}
-.map-legend{position:absolute;left:max(10px,env(safe-area-inset-left));bottom:74px;z-index:500;background:rgba(255,255,255,.92);border-radius:10px;padding:6px 9px;font-size:11px;color:#333;display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.12);max-width:calc(100% - 20px)}
+.map-legend{position:absolute;left:max(10px,env(safe-area-inset-left));bottom:calc(100px + env(safe-area-inset-bottom));z-index:500;background:rgba(255,255,255,.92);border-radius:10px;padding:6px 9px;font-size:11px;color:#333;display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 1px 4px rgba(0,0,0,.12);max-width:calc(100% - 20px)}
 .map-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:3px;vertical-align:-1px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
-.hero-handle{position:absolute;left:0;right:0;bottom:0;height:64px;z-index:600;border:0;background:var(--bg);color:var(--ink);
-  font:600 15px Inter,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;
-  border-radius:18px 18px 0 0;box-shadow:0 -6px 18px rgba(11,31,77,.15);padding-bottom:env(safe-area-inset-bottom)}
+.hero-handle{position:absolute;left:0;right:0;bottom:0;height:calc(92px + env(safe-area-inset-bottom));z-index:600;border:0;background:var(--bg);
+  display:flex;align-items:flex-start;justify-content:center;cursor:pointer;padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+  border-radius:20px 20px 0 0;box-shadow:0 -6px 18px rgba(11,31,77,.18)}
+.hero-handle .pill{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;max-width:420px;height:58px;border-radius:16px;
+  background:linear-gradient(180deg,#2a78d6,#1c5cab);color:#fff;font:700 18px Inter,sans-serif;letter-spacing:.01em;
+  box-shadow:0 4px 14px rgba(28,92,171,.4)}
+.hero-handle:active .pill{transform:scale(.98)}
 .hero-handle svg{animation:bob 1.6s ease-in-out infinite}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(3px)}}
 .mk{position:relative;width:0;height:0}
@@ -835,7 +839,7 @@ svg.leaflet-image-layer.leaflet-interactive path {
     <div id="heroAlert"></div>
   </div>
   <div class="map-legend" aria-hidden="true"><b>Nysnö 10 d</b><span><i style="background:#dbe9fb"></i>&lt;5</span><span><i style="background:#86b6ef"></i>5–15</span><span><i style="background:#2a78d6"></i>15–30</span><span><i style="background:#eb6834"></i>&gt;30 cm</span></div>
-  <button class="hero-handle" id="toList" type="button"><span>Alla orter</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>
+  <button class="hero-handle" id="toList" type="button"><span class="pill">Visa alla orter<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></span></button>
 </section>
 <div class="wrap" id="list">
   <header>
@@ -963,11 +967,12 @@ function snowColor(c){ return c>30?['#eb6834','#fff']:c>=15?['#2a78d6','#fff']:c
   map.zoomControl.setPosition('topright');
   map.attributionControl.setPrefix(false);
   const onGH=/github\.io$/.test(location.hostname);
+  LF.geoJSON(NORDIC,{interactive:false,style:f=>({color:'#9db5cf',weight:1,fillColor:(f.properties.c==='SE'||f.properties.c==='NO')?'#ffffff':'#eef3f8',fillOpacity:1})}).addTo(map);
   if(onGH){
-    LF.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19,
-      attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>'}).addTo(map);
-  } else {
-    LF.geoJSON(NORDIC,{interactive:false,style:f=>({color:'#9db5cf',weight:1,fillColor:(f.properties.c==='SE'||f.properties.c==='NO')?'#ffffff':'#eef3f8',fillOpacity:1})}).addTo(map);
+    const tl=LF.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,
+      attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'});
+    let errs=0; tl.on('tileerror',()=>{ if(++errs>4 && map.hasLayer(tl)) map.removeLayer(tl); });
+    tl.addTo(map);
   }
   const pts=[];
   for(const l of L_ALL){
@@ -978,7 +983,7 @@ function snowColor(c){ return c>30?['#eb6834','#fff']:c>=15?['#2a78d6','#fff']:c
     m.on('click',()=>{ location.hash=l.id; });
   }
   const isPhone=innerWidth<640;
-  map.fitBounds(LF.latLngBounds(pts),{paddingTopLeft:[24,isPhone?150:130],paddingBottomRight:[24,isPhone?60:40]});
+  map.fitBounds(LF.latLngBounds(pts),{paddingTopLeft:[24,isPhone?150:130],paddingBottomRight:[24,isPhone?70:50]});
   const upd=()=>document.getElementById('map').classList.toggle('names',map.getZoom()>=6.25);
   map.on('zoomend',upd); upd();
   window.__map=map;
