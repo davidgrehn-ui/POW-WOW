@@ -11,6 +11,7 @@ const LOC = [
  ["Tärnaby",65.716,15.262],
  ["Kittelfjäll",65.255,15.517],
  ["Söderbodan (Östanbäck)",64.867,21.100],
+ ["Stora Blåsjön",64.800,14.070],
  ["Åre",63.399,13.081],
  ["Örnsköldsvik",63.290,18.716],
  ["Ramundberget",62.700,12.395],
