@@ -10,6 +10,7 @@ const LOC = [
  ["Pullinki",66.370,23.680],
  ["Kåbdalis",66.150,19.960],
  ["Galtispouda",66.070,17.820],
+ ["Rönäs",65.850,14.767],
  ["Hemavan",65.816,15.093],
  ["Tärnaby",65.716,15.262],
  ["Kittelfjäll",65.255,15.517],
@@ -154,10 +155,33 @@ async function snowGrid(){
   }
   return ok>M.idx.length*0.8 ? {t:new Date().toISOString(),la0:M.la0,lo0:M.lo0,dla:M.dla,dlo:M.dlo,nla:M.nla,nlo:M.nlo,v} : null;
 }
-let prevSg=null; try{ prevSg=JSON.parse(readFileSync(new URL('../data.json', import.meta.url),'utf8')).sg||null; }catch(e){}
+let prev=null; try{ prev=JSON.parse(readFileSync(new URL('../data.json', import.meta.url),'utf8')); }catch(e){}
+const prevSg=prev?.sg||null;
 let sg=null; try{ sg=await snowGrid(); }catch(e){ console.error('Snödjupsrutnät misslyckades', e); }
 if(!sg) console.error('Behåller tidigare snödjupsrutnät.');
 d.sg = sg || prevSg || undefined;
 writeFileSync(new URL('../data.json', import.meta.url), JSON.stringify(d));
 console.log('Skrev data.json', d.gen);
+
+// --- Snölarm via ntfy (push till mobilen). Prenumerera på ämnet i appen ntfy. ---
+const TOPIC = process.env.NTFY_TOPIC || 'powwow-snolarm-e97854';
+const LIMIT = 30;
+const tot = a => (a||[]).reduce((s,x)=>s+(x?x[0]||0:0),0);
+const alarmsOf = data => new Map((data?.loc||[]).map(l=>{const s=tot(l.smhi), y=tot(l.yr); return [l.n,{s,y,b:Math.max(s,y)}];}).filter(([,v])=>v.b>LIMIT));
+const now = alarmsOf(d), before = alarmsOf(prev);
+const hourSE = +new Intl.DateTimeFormat('sv-SE',{timeZone:'Europe/Stockholm',hour:'2-digit',hour12:false}).format(new Date());
+const morning = hourSE < 9;
+const fresh = [...now.keys()].filter(n=>!before.has(n));
+const list = morning ? [...now.keys()] : fresh;
+if (list.length) {
+  const line = n => { const v=now.get(n); return `${n.replace(' (Östanbäck)','')}: ${Math.round(v.b)} cm (SMHI ${Math.round(v.s)} · YR ${Math.round(v.y)})`; };
+  const sorted = list.sort((a,b)=>now.get(b).b-now.get(a).b);
+  const title = morning ? `Snölarm: ${sorted.length} ${sorted.length===1?'ort':'orter'} över ${LIMIT} cm` : `Nytt snölarm: ${sorted.map(n=>n.replace(' (Östanbäck)','')).join(', ')}`;
+  const body = sorted.map(line).join('\n') + '\nVäntad nysnö kommande 10 dagar.';
+  try {
+    const r = await fetch('https://ntfy.sh/', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ topic:TOPIC, title, message:body, tags:['snowflake'], click:'https://davidgrehn-ui.github.io/POW-WOW/', priority: morning?3:4 }) });
+    console.log('ntfy', r.status, title);
+  } catch(e) { console.error('ntfy misslyckades', e); }
+} else console.log('Inget snölarm att skicka', morning?'(morgon)':'', [...now.keys()]);
 for (const [n,s,y] of snow10) console.log(`${n}: SMHI ${s} cm, YR ${y} cm`);

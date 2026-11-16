@@ -46,6 +46,14 @@ h1.brand img{border-radius:12px;box-shadow:0 2px 8px rgba(11,31,77,.25)}
 .alert{display:flex;gap:12px;align-items:flex-start;background:var(--alert-bg);border:1px solid var(--alert-line);border-left-width:5px;border-radius:12px;padding:12px 16px;color:var(--alert-ink)}
 .alert b{color:var(--ink)}
 .alert .ic{font-size:20px;line-height:1}
+.notify{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin:10px 0 16px;color:var(--ink-2)}
+.notify summary{cursor:pointer;padding:12px 16px;font-weight:700;color:var(--ink);list-style:none}
+.notify summary::-webkit-details-marker{display:none}
+.notify summary::after{content:" ›";color:var(--ink-2)}
+.notify[open] summary::after{content:" ⌄"}
+.notify ol{margin:0;padding:0 16px 14px 34px;line-height:1.55}
+.notify code{background:#eef3f8;border-radius:6px;padding:2px 6px;font-size:13px;color:var(--ink)}
+.notify .cp{font:inherit;font-size:12px;font-weight:700;border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 9px;margin-left:6px;cursor:pointer}
 .ok{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px;color:var(--ink-2)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 16px 14px;box-shadow:var(--shadow);cursor:pointer;text-align:left;font:inherit;color:inherit;transition:transform .12s, border-color .12s;position:relative}
@@ -862,6 +870,13 @@ svg.leaflet-image-layer.leaflet-interactive path {
     </div>
   </header>
   <div class="alerts" id="alerts"></div>
+  <details class="notify" id="notify"><summary>🔔 Få snölarm i mobilen</summary>
+    <ol>
+      <li>Installera den kostnadsfria appen <a href="https://apps.apple.com/app/ntfy/id1625396347" target="_blank" rel="noopener">ntfy</a> (finns även för <a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noopener">Android</a>).</li>
+      <li>Öppna ntfy, tryck <b>+</b> och prenumerera på ämnet <code>powwow-snolarm-e97854</code><button class="cp" type="button" id="cpTopic">Kopiera</button></li>
+      <li>Tillåt notiser. Du får ett larm varje morgon (ca 06:45) när någon ort väntas få mer än 30 cm de kommande 10 dagarna, och direkt när en ny ort passerar 30 cm.</li>
+    </ol>
+  </details>
   <div class="grid" id="grid"></div>
   <div class="foot" id="foot"></div>
 </div>
@@ -874,12 +889,12 @@ catch(e){ document.getElementById('grid').innerHTML='<div class="ok">Kunde inte 
 const LIMIT = 30;
 const META = {
  "Riksgränsen":["Lappland","riksgransen"],"Björkliden":["Lappland","bjorkliden"],"Abisko":["Lappland","abisko"],
- "Galtispouda":["Arjeplog","galtispouda"],"Hemavan":["Västerbotten","hemavan"],"Tärnaby":["Västerbotten","tarnaby"],"Kittelfjäll":["Västerbotten","kittelfjall"],
+ "Galtispouda":["Arjeplog","galtispouda"],"Rönäs":["Västerbotten · Hemavan","ronas"],"Hemavan":["Västerbotten","hemavan"],"Tärnaby":["Västerbotten","tarnaby"],"Kittelfjäll":["Västerbotten","kittelfjall"],
  "Åre":["Jämtland","are"],"Örnsköldsvik":["Ångermanland","ornskoldsvik"],"Söderbodan (Östanbäck)":["Skellefteå","soderbodan"],"Ramundberget":["Härjedalen","ramundberget"],
  "Funäsdalen":["Härjedalen","funasdalen"],"Tänndalen":["Härjedalen","tanndalen"],"Tännäskröket":["Härjedalen","tannaskroket"],
  "Sundsvall":["Medelpad","sundsvall"],"Järvsö":["Hälsingland","jarvso"],"Sälen":["Dalarna","salen"],"Romme":["Dalarna","romme"],"Narvik":["Norge · Nordland","narvik"],"Pullinki":["Norrbotten · Övertorneå","pullinki"],"Kåbdalis":["Norrbotten · Jokkmokk","kabdalis"],"Storklinta":["Västerbotten · Jörn","storklinta"],"Stora Blåsjön":["Jämtland","storablasjon"],"Idre":["Dalarna","idre"],"Trysil":["Norge · Innlandet","trysil"],"Hemsedal":["Norge · Buskerud","hemsedal"],"Stranda":["Norge · Møre og Romsdal","stranda"],"Källviksbacken":["Dalarna · Falun","kallviksbacken"],"Kungsberget":["Gästrikland","kungsberget"],"Flottsbro":["Stockholm","flottsbro"]
 };
-const GEO = ["Narvik", "Riksgränsen", "Björkliden", "Abisko", "Pullinki", "Kåbdalis", "Galtispouda", "Hemavan", "Tärnaby", "Kittelfjäll", "Storklinta", "Söderbodan (Östanbäck)", "Stora Blåsjön", "Åre", "Örnsköldsvik", "Ramundberget", "Funäsdalen", "Tänndalen", "Tännäskröket", "Sundsvall", "Stranda", "Idre", "Järvsö", "Trysil", "Sälen", "Hemsedal", "Kungsberget", "Källviksbacken", "Romme", "Flottsbro"];
+const GEO = ["Narvik", "Riksgränsen", "Björkliden", "Abisko", "Pullinki", "Kåbdalis", "Galtispouda", "Rönäs", "Hemavan", "Tärnaby", "Kittelfjäll", "Storklinta", "Söderbodan (Östanbäck)", "Stora Blåsjön", "Åre", "Örnsköldsvik", "Ramundberget", "Funäsdalen", "Tänndalen", "Tännäskröket", "Sundsvall", "Stranda", "Idre", "Järvsö", "Trysil", "Sälen", "Hemsedal", "Kungsberget", "Källviksbacken", "Romme", "Flottsbro"];
 const sum = a => (a||[]).reduce((s,d)=>s+(d?d[0]||0:0),0);
 const fmt = (x,d=0) => x==null||isNaN(x)?'–':x.toLocaleString('sv-SE',{minimumFractionDigits:d,maximumFractionDigits:d});
 const wd = s => new Date(s+'T12:00:00Z').toLocaleDateString('sv-SE',{weekday:'short',day:'numeric',month:'numeric',timeZone:'UTC'}).replace('.','');
@@ -888,7 +903,7 @@ const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).
 
 
 // --- Live-uppdatering av prognoser (SMHI + YR) direkt i webbläsaren om datan är äldre än 3 h ---
-const COORD={"Narvik": [68.43, 17.449], "Riksgränsen": [68.426, 18.125], "Björkliden": [68.408, 18.68], "Abisko": [68.349, 18.831], "Pullinki": [66.37, 23.68], "Kåbdalis": [66.15, 19.96], "Galtispouda": [66.07, 17.82], "Hemavan": [65.816, 15.093], "Tärnaby": [65.716, 15.262], "Kittelfjäll": [65.255, 15.517], "Storklinta": [65.19, 20.04], "Söderbodan (Östanbäck)": [64.867, 21.1], "Stora Blåsjön": [64.8, 14.07], "Åre": [63.399, 13.081], "Örnsköldsvik": [63.29, 18.716], "Ramundberget": [62.7, 12.395], "Funäsdalen": [62.538, 12.545], "Tänndalen": [62.525, 12.325], "Tännäskröket": [62.47, 12.47], "Sundsvall": [62.391, 17.307], "Stranda": [62.29, 6.84], "Idre": [61.89, 12.7], "Järvsö": [61.712, 16.155], "Trysil": [61.311, 12.21], "Sälen": [61.16, 13.23], "Hemsedal": [60.858, 8.535], "Kungsberget": [60.775, 16.475], "Källviksbacken": [60.565, 15.615], "Romme": [60.393, 15.38], "Flottsbro": [59.236, 17.888]};
+const COORD={"Narvik": [68.43, 17.449], "Riksgränsen": [68.426, 18.125], "Björkliden": [68.408, 18.68], "Abisko": [68.349, 18.831], "Pullinki": [66.37, 23.68], "Kåbdalis": [66.15, 19.96], "Galtispouda": [66.07, 17.82], "Rönäs": [65.85, 14.767], "Hemavan": [65.816, 15.093], "Tärnaby": [65.716, 15.262], "Kittelfjäll": [65.255, 15.517], "Storklinta": [65.19, 20.04], "Söderbodan (Östanbäck)": [64.867, 21.1], "Stora Blåsjön": [64.8, 14.07], "Åre": [63.399, 13.081], "Örnsköldsvik": [63.29, 18.716], "Ramundberget": [62.7, 12.395], "Funäsdalen": [62.538, 12.545], "Tänndalen": [62.525, 12.325], "Tännäskröket": [62.47, 12.47], "Sundsvall": [62.391, 17.307], "Stranda": [62.29, 6.84], "Idre": [61.89, 12.7], "Järvsö": [61.712, 16.155], "Trysil": [61.311, 12.21], "Sälen": [61.16, 13.23], "Hemsedal": [60.858, 8.535], "Kungsberget": [60.775, 16.475], "Källviksbacken": [60.565, 15.615], "Romme": [60.393, 15.38], "Flottsbro": [59.236, 17.888]};
 let LIVE=null;
 async function liveRefresh(){
   const tz='Europe/Stockholm', dstr=d=>new Date(d).toLocaleDateString('sv-SE',{timeZone:tz});
@@ -1030,6 +1045,7 @@ function snowColor(c){ return c>30?['#eb6834','#fff']:c>=15?['#2a78d6','#fff']:c
   map.on('zoomend',upd); upd();
   window.__map=map;
 })();
+document.getElementById('cpTopic').addEventListener('click',e=>{ const b=e.currentTarget; try{ navigator.clipboard.writeText('powwow-snolarm-e97854').then(()=>{b.textContent='Kopierat ✓'}); }catch(_){ } });
 document.getElementById('toList').addEventListener('click',()=>document.getElementById('list').scrollIntoView({behavior:'smooth'}));
 { const hot=[...L_ALL].filter(l=>l.best>LIMIT).sort((a,b)=>b.best-a.best);
   document.getElementById('heroAlert').innerHTML = hot.length
