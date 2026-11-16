@@ -967,7 +967,8 @@ function snowColor(c){ return c>30?['#eb6834','#fff']:c>=15?['#2a78d6','#fff']:c
   map.zoomControl.setPosition('topright');
   map.attributionControl.setPrefix(false);
   const onGH=/github\.io$/.test(location.hostname);
-  LF.geoJSON(NORDIC,{interactive:false,style:f=>({color:'#9db5cf',weight:1,fillColor:(f.properties.c==='SE'||f.properties.c==='NO')?'#ffffff':'#eef3f8',fillOpacity:1})}).addTo(map);
+  map.createPane('base'); map.getPane('base').style.zIndex=150;
+  LF.geoJSON(NORDIC,{pane:'base',interactive:false,style:f=>({color:'#9db5cf',weight:1,fillColor:(f.properties.c==='SE'||f.properties.c==='NO')?'#ffffff':'#eef3f8',fillOpacity:1})}).addTo(map);
   if(onGH){
     const tl=LF.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,
       attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'});
