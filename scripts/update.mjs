@@ -1,6 +1,6 @@
 // Hämtar snödata från SMHI, YR (MET Norway) och MET Norge Frost och skriver data.json.
 // Körs av GitHub Actions (.github/workflows/update.yml). Node 20+.
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
 async function collect(){
 const LOC = [
  ["Narvik",68.430,17.449],
@@ -139,6 +139,25 @@ const {red, snow10} = await collect();
 const d = JSON.parse(red);
 const okF = d.loc.filter(l=>l.smhi||l.yr).length;
 if (okF < d.loc.length/2) { console.error('För få prognoser hämtades – avbryter utan att skriva.'); process.exit(1); }
-writeFileSync(new URL('../data.json', import.meta.url), red);
+// --- Snödjup i rutnät över Sverige och Norge (Open-Meteo, modellanalys) ---
+async function snowGrid(){
+  const M=JSON.parse(readFileSync(new URL('./gridmask.json', import.meta.url),'utf8'));
+  const v=new Array(M.nla*M.nlo).fill(null); let ok=0;
+  for(let b=0;b<M.idx.length;b+=100){
+    const chunk=M.idx.slice(b,b+100);
+    const la=chunk.map(k=>(M.la0+Math.floor(k/M.nlo)*M.dla).toFixed(2)), lo=chunk.map(k=>(M.lo0+(k%M.nlo)*M.dlo).toFixed(2));
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${la.join(',')}&longitude=${lo.join(',')}&current=snow_depth&timezone=GMT`;
+    let j=null;
+    for(let t=0;t<3&&!j;t++){ try{const r=await fetch(u,{headers:{'User-Agent':'POW-WOW/1.0 github.com/davidgrehn-ui/POW-WOW'}}); if(r.ok) j=await r.json(); else await new Promise(s=>setTimeout(s,15000));}catch(e){await new Promise(s=>setTimeout(s,5000))} }
+    if(Array.isArray(j)) j.forEach((x,i)=>{const sd=x?.current?.snow_depth; if(sd!=null){v[chunk[i]]=Math.max(0,Math.round(sd*100)); ok++;}});
+    if(b+100<M.idx.length) await new Promise(s=>setTimeout(s,11000));
+  }
+  return ok>M.idx.length*0.8 ? {t:new Date().toISOString(),la0:M.la0,lo0:M.lo0,dla:M.dla,dlo:M.dlo,nla:M.nla,nlo:M.nlo,v} : null;
+}
+let prevSg=null; try{ prevSg=JSON.parse(readFileSync(new URL('../data.json', import.meta.url),'utf8')).sg||null; }catch(e){}
+let sg=null; try{ sg=await snowGrid(); }catch(e){ console.error('Snödjupsrutnät misslyckades', e); }
+if(!sg) console.error('Behåller tidigare snödjupsrutnät.');
+d.sg = sg || prevSg || undefined;
+writeFileSync(new URL('../data.json', import.meta.url), JSON.stringify(d));
 console.log('Skrev data.json', d.gen);
 for (const [n,s,y] of snow10) console.log(`${n}: SMHI ${s} cm, YR ${y} cm`);
