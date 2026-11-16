@@ -7,6 +7,7 @@ const LOC = [
  ["Riksgränsen",68.426,18.125],
  ["Björkliden",68.408,18.680],
  ["Abisko",68.349,18.831],
+ ["Dundret",67.094,20.552],
  ["Pullinki",66.370,23.680],
  ["Kåbdalis",66.150,19.960],
  ["Galtispouda",66.070,17.820],
