@@ -3,13 +3,17 @@
 import { writeFileSync } from 'node:fs';
 async function collect(){
 const LOC = [
+ ["Narvik",68.430,17.449],
  ["Riksgränsen",68.426,18.125],
  ["Björkliden",68.408,18.680],
  ["Abisko",68.349,18.831],
+ ["Pullinki",66.370,23.680],
+ ["Kåbdalis",66.150,19.960],
  ["Galtispouda",66.070,17.820],
  ["Hemavan",65.816,15.093],
  ["Tärnaby",65.716,15.262],
  ["Kittelfjäll",65.255,15.517],
+ ["Storklinta",65.190,20.040],
  ["Söderbodan (Östanbäck)",64.867,21.100],
  ["Stora Blåsjön",64.800,14.070],
  ["Åre",63.399,13.081],
@@ -100,7 +104,7 @@ async function obs(k,lat,lon){
   return null;
 }
 const FROST_ID=process.env.FROST_CLIENT_ID||'';
-const NOR=new Set(FROST_ID?["Trysil","Hemsedal","Stranda"]:[]);
+const NOR=new Set(FROST_ID?["Trysil","Hemsedal","Stranda","Narvik"]:[]);
 const FH={headers:{...UA,Authorization:'Basic '+Buffer.from(FROST_ID+':').toString('base64')}};
 const FJ=async u=>{for(let i=0;i<2;i++){try{const r=await fetch(u,FH);if(r.ok)return await r.json();if(r.status===404||r.status===412)return null}catch(e){}await new Promise(s=>setTimeout(s,800))}return null};
 const FEL={sd:['surface_snow_thickness','last'],p:['sum(precipitation_amount P1D)','first'],tn:['min(air_temperature P1D)','min'],tx:['max(air_temperature P1D)','max'],w:['max(wind_speed PT1H)','max']};

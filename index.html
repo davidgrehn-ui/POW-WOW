@@ -868,9 +868,9 @@ const META = {
  "Galtispouda":["Arjeplog","galtispouda"],"Hemavan":["Västerbotten","hemavan"],"Tärnaby":["Västerbotten","tarnaby"],"Kittelfjäll":["Västerbotten","kittelfjall"],
  "Åre":["Jämtland","are"],"Örnsköldsvik":["Ångermanland","ornskoldsvik"],"Söderbodan (Östanbäck)":["Skellefteå","soderbodan"],"Ramundberget":["Härjedalen","ramundberget"],
  "Funäsdalen":["Härjedalen","funasdalen"],"Tänndalen":["Härjedalen","tanndalen"],"Tännäskröket":["Härjedalen","tannaskroket"],
- "Sundsvall":["Medelpad","sundsvall"],"Järvsö":["Hälsingland","jarvso"],"Sälen":["Dalarna","salen"],"Romme":["Dalarna","romme"],"Stora Blåsjön":["Jämtland","storablasjon"],"Idre":["Dalarna","idre"],"Trysil":["Norge · Innlandet","trysil"],"Hemsedal":["Norge · Buskerud","hemsedal"],"Stranda":["Norge · Møre og Romsdal","stranda"],"Källviksbacken":["Dalarna · Falun","kallviksbacken"],"Kungsberget":["Gästrikland","kungsberget"],"Flottsbro":["Stockholm","flottsbro"]
+ "Sundsvall":["Medelpad","sundsvall"],"Järvsö":["Hälsingland","jarvso"],"Sälen":["Dalarna","salen"],"Romme":["Dalarna","romme"],"Narvik":["Norge · Nordland","narvik"],"Pullinki":["Norrbotten · Övertorneå","pullinki"],"Kåbdalis":["Norrbotten · Jokkmokk","kabdalis"],"Storklinta":["Västerbotten · Jörn","storklinta"],"Stora Blåsjön":["Jämtland","storablasjon"],"Idre":["Dalarna","idre"],"Trysil":["Norge · Innlandet","trysil"],"Hemsedal":["Norge · Buskerud","hemsedal"],"Stranda":["Norge · Møre og Romsdal","stranda"],"Källviksbacken":["Dalarna · Falun","kallviksbacken"],"Kungsberget":["Gästrikland","kungsberget"],"Flottsbro":["Stockholm","flottsbro"]
 };
-const GEO = ["Riksgränsen", "Björkliden", "Abisko", "Galtispouda", "Hemavan", "Tärnaby", "Kittelfjäll", "Söderbodan (Östanbäck)", "Stora Blåsjön", "Åre", "Örnsköldsvik", "Ramundberget", "Funäsdalen", "Tänndalen", "Tännäskröket", "Sundsvall", "Stranda", "Idre", "Järvsö", "Trysil", "Sälen", "Hemsedal", "Kungsberget", "Källviksbacken", "Romme", "Flottsbro"];
+const GEO = ["Narvik", "Riksgränsen", "Björkliden", "Abisko", "Pullinki", "Kåbdalis", "Galtispouda", "Hemavan", "Tärnaby", "Kittelfjäll", "Storklinta", "Söderbodan (Östanbäck)", "Stora Blåsjön", "Åre", "Örnsköldsvik", "Ramundberget", "Funäsdalen", "Tänndalen", "Tännäskröket", "Sundsvall", "Stranda", "Idre", "Järvsö", "Trysil", "Sälen", "Hemsedal", "Kungsberget", "Källviksbacken", "Romme", "Flottsbro"];
 const sum = a => (a||[]).reduce((s,d)=>s+(d?d[0]||0:0),0);
 const fmt = (x,d=0) => x==null||isNaN(x)?'–':x.toLocaleString('sv-SE',{minimumFractionDigits:d,maximumFractionDigits:d});
 const wd = s => new Date(s+'T12:00:00Z').toLocaleDateString('sv-SE',{weekday:'short',day:'numeric',month:'numeric',timeZone:'UTC'}).replace('.','');
@@ -879,7 +879,7 @@ const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).
 
 
 // --- Live-uppdatering av prognoser (SMHI + YR) direkt i webbläsaren om datan är äldre än 3 h ---
-const COORD={"Riksgränsen":[68.426,18.125],"Björkliden":[68.408,18.680],"Abisko":[68.349,18.831],"Galtispouda":[66.070,17.820],"Hemavan":[65.816,15.093],"Tärnaby":[65.716,15.262],"Kittelfjäll":[65.255,15.517],"Söderbodan (Östanbäck)":[64.867,21.100],"Åre":[63.399,13.081],"Örnsköldsvik":[63.290,18.716],"Ramundberget":[62.700,12.395],"Funäsdalen":[62.538,12.545],"Tänndalen":[62.525,12.325],"Tännäskröket":[62.470,12.470],"Sundsvall":[62.391,17.307],"Idre":[61.890,12.700],"Järvsö":[61.712,16.155],"Trysil":[61.311,12.210],"Sälen":[61.160,13.230],"Hemsedal":[60.858,8.535],"Stora Blåsjön":[64.800,14.070],"Stranda":[62.290,6.840],"Källviksbacken":[60.565,15.615],"Kungsberget":[60.775,16.475],"Romme":[60.393,15.380],"Flottsbro":[59.236,17.888]};
+const COORD={"Narvik": [68.43, 17.449], "Riksgränsen": [68.426, 18.125], "Björkliden": [68.408, 18.68], "Abisko": [68.349, 18.831], "Pullinki": [66.37, 23.68], "Kåbdalis": [66.15, 19.96], "Galtispouda": [66.07, 17.82], "Hemavan": [65.816, 15.093], "Tärnaby": [65.716, 15.262], "Kittelfjäll": [65.255, 15.517], "Storklinta": [65.19, 20.04], "Söderbodan (Östanbäck)": [64.867, 21.1], "Stora Blåsjön": [64.8, 14.07], "Åre": [63.399, 13.081], "Örnsköldsvik": [63.29, 18.716], "Ramundberget": [62.7, 12.395], "Funäsdalen": [62.538, 12.545], "Tänndalen": [62.525, 12.325], "Tännäskröket": [62.47, 12.47], "Sundsvall": [62.391, 17.307], "Stranda": [62.29, 6.84], "Idre": [61.89, 12.7], "Järvsö": [61.712, 16.155], "Trysil": [61.311, 12.21], "Sälen": [61.16, 13.23], "Hemsedal": [60.858, 8.535], "Kungsberget": [60.775, 16.475], "Källviksbacken": [60.565, 15.615], "Romme": [60.393, 15.38], "Flottsbro": [59.236, 17.888]};
 let LIVE=null;
 async function liveRefresh(){
   const tz='Europe/Stockholm', dstr=d=>new Date(d).toLocaleDateString('sv-SE',{timeZone:tz});
@@ -1093,7 +1093,7 @@ window.__render=render;
 document.getElementById('foot').innerHTML = `
   <b>Om datan.</b> Prognoser: SMHI <i>snow1g</i> punktprognos och YR/met.no <i>Locationforecast 2.0</i>, summerade per dygn (svensk tid).
   Nysnö räknas som nederbörd i fast form, 1 mm vatten ≈ 1 cm snö (SMHI anger andel fast nederbörd; för YR används temperaturen).
-  Faktisk nysnö kan bli mer i kallt, torrt väder och mindre i blöt snö. Historik och snödjup kommer från närmaste aktiva SMHI-station, för Trysil, Hemsedal och Stranda från MET Norges stationer (Frost API)
+  Faktisk nysnö kan bli mer i kallt, torrt väder och mindre i blöt snö. Historik och snödjup kommer från närmaste aktiva SMHI-station, för de norska orterna från MET Norges stationer (Frost API)
   – stationerna kan ligga en bit från skidområdet och lägre i terrängen. Larmgräns: över ${LIMIT} cm enligt SMHI eller YR under 10 dagar.
   Klicka på en ort för grafer. Källor: <a href="https://www.smhi.se/data" target="_blank" rel="noopener">SMHI Öppna data</a> ·
   <a href="https://www.yr.no" target="_blank" rel="noopener">YR (met.no)</a>.`;
