@@ -18,12 +18,14 @@ const LOC = [
  ["Tänndalen",62.525,12.325],
  ["Tännäskröket",62.470,12.470],
  ["Sundsvall",62.391,17.307],
+ ["Stranda",62.290,6.840],
  ["Idre",61.890,12.700],
  ["Järvsö",61.712,16.155],
  ["Trysil",61.311,12.210],
  ["Sälen",61.160,13.230],
  ["Hemsedal",60.858,8.535],
  ["Kungsberget",60.775,16.475],
+ ["Källviksbacken",60.565,15.615],
  ["Romme",60.393,15.380],
  ["Flottsbro",59.236,17.888]];
 const tz='Europe/Stockholm';
@@ -97,7 +99,7 @@ async function obs(k,lat,lon){
   return null;
 }
 const FROST_ID=process.env.FROST_CLIENT_ID||'';
-const NOR=new Set(FROST_ID?["Trysil","Hemsedal"]:[]);
+const NOR=new Set(FROST_ID?["Trysil","Hemsedal","Stranda"]:[]);
 const FH={headers:{...UA,Authorization:'Basic '+Buffer.from(FROST_ID+':').toString('base64')}};
 const FJ=async u=>{for(let i=0;i<2;i++){try{const r=await fetch(u,FH);if(r.ok)return await r.json();if(r.status===404||r.status===412)return null}catch(e){}await new Promise(s=>setTimeout(s,800))}return null};
 const FEL={sd:['surface_snow_thickness','last'],p:['sum(precipitation_amount P1D)','first'],tn:['min(air_temperature P1D)','min'],tx:['max(air_temperature P1D)','max'],w:['max(wind_speed PT1H)','max']};
