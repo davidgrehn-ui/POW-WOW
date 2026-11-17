@@ -97,12 +97,15 @@ async function obs(k,lat,lon){
     const j=await J(`https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/${PAR[k]}/station/${s.key}/period/latest-months/data.json`);
     const v=(j?.value||[]).filter(x=>(x.date??x.to)>=cutoff&&x.value!==''&&x.value!=null);
     if(v.length<3) continue;
-    const by={};
+    const by={},dir={};
+    let dm=null; if(k==='w'){const jd=await J(`https://opendata-download-metobs.smhi.se/api/version/1.0/parameter/3/station/${s.key}/period/latest-months/data.json`); dm=new Map((jd?.value||[]).map(x=>[x.date,parseFloat(x.value)]));}
     for(const x of v){
       let day=x.ref?x.ref:dstr(x.date); const val=parseFloat(x.value);
-      if(k==='w'){by[day]=Math.max(by[day]??0,val)} else by[day]=val;
+      if(k==='w'){if(val>=(by[day]??-1)){by[day]=val; const wd0=dm?.get(x.date); if(wd0!=null&&isFinite(wd0)) dir[day]=wd0;}} else by[day]=val;
     }
-    return {st:s.name,km:Math.round(d),v:PD.map(dd=>by[dd]==null?null:(k==='sd'?Math.round(by[dd]*100):r1(by[dd])))};
+    const res={st:s.name,km:Math.round(d),v:PD.map(dd=>by[dd]==null?null:(k==='sd'?Math.round(by[dd]*100):r1(by[dd])))};
+    if(k==='w'&&Object.keys(dir).length) res.d=PD.map(dd=>dir[dd]==null?null:Math.round(dir[dd]));
+    return res;
   }
   return null;
 }
@@ -117,13 +120,17 @@ async function frost(k,lat,lon){
   for(const s of (src?.data||[])){
     if(s.distance>60) break;
     const j=await FJ(`https://frost.met.no/observations/v0.jsonld?sources=${s.id}&referencetime=${PD[0]}/${addDays(today,1)}&elements=${encodeURIComponent(el)}`);
-    const by={};
+    const by={},dir={};
+    let dm=null; if(k==='w'){const jd=await FJ(`https://frost.met.no/observations/v0.jsonld?sources=${s.id}&referencetime=${PD[0]}/${addDays(today,1)}&elements=wind_from_direction`); dm=new Map((jd?.data||[]).map(x=>[x.referenceTime,x.observations?.[0]?.value]));}
     for(const d of (j?.data||[])){ const day=el.includes('P1D')?d.referenceTime.slice(0,10):dstr(d.referenceTime); const v=d.observations?.[0]?.value; if(v==null) continue;
+      if(k==='w'&&v>=(by[day]??-1e9)){const wd0=dm?.get(d.referenceTime); if(wd0!=null) dir[day]=wd0;}
       if(how==='max') by[day]=Math.max(by[day]??-1e9,v); else if(how==='min') by[day]=Math.min(by[day]??1e9,v); else if(how==='first'){ if(by[day]==null) by[day]=v; } else by[day]=v; }
     const v=PD.map(dd=>by[dd]==null?null:(k==='sd'?Math.max(0,Math.round(by[dd])):r1(by[dd])));
     if(v.filter(x=>x!=null).length<3) continue;
     const name=s.name.split(' ').map(w=>w.length>2?w[0]+w.slice(1).toLowerCase():w).join(' ');
-    return {st:name+' (MET)',km:Math.round(s.distance),v};
+    const res={st:name+' (MET)',km:Math.round(s.distance),v};
+    if(k==='w'&&Object.keys(dir).length) res.d=PD.map(dd=>dir[dd]==null?null:Math.round(dir[dd]));
+    return res;
   }
   return null;
 }

@@ -1092,6 +1092,7 @@ function openDetail(l){
   const o=l.obs, sm=l.smhi||[], yr=l.yr||[];
   const col = k => (o[k]&&o[k].v)||nul;
   const F = (src,i)=>src.map(d=>d?d[i]:null);
+  const obsD=(o.w&&o.w.d)||nul;
   const st = k => o[k]?`${o[k].st} (${o[k].km} km)`:'ingen mätstation i närheten';
   const pastSnow = col('p').map((p,i)=>p==null?null:((col('tx')[i]??5)<=1?p:((col('tn')[i]??5)<=-1&&(col('tx')[i]??5)<=4?p*0.5:0)));
   panel.innerHTML = `
@@ -1116,13 +1117,13 @@ function openDetail(l){
       <div class="ch"><h4>Temperatur (°C)</h4><p>Dygnets max och min. Historik: ${st('tx')}.</p>
         <div class="legend"><span><i class="ln" style="border-color:var(--t-max)"></i>Max</span><span><i class="ln" style="border-color:var(--t-min)"></i>Min</span><span><i class="ln dash" style="border-color:var(--ink-3)"></i>YR (streckad)</span></div>
         <div class="box"><canvas id="c3"></canvas></div></div>
-      <div class="ch"><h4>Vind (m/s)</h4><p>Högsta medelvind per dygn. Pilarna överst visar vart vinden blåser när den är som starkast (SMHI). Historik: ${st('w')}.</p>
+      <div class="ch"><h4>Vind (m/s)</h4><p>Högsta medelvind per dygn. Pilarna överst visar vart vinden blåser när den är som starkast och siffran medelvinden i m/s (grå = uppmätt, svart = SMHI-prognos). Historik: ${st('w')}.</p>
         <div class="legend"><span><i class="ln" style="border-color:var(--s-obs)"></i>Uppmätt</span><span><i class="ln" style="border-color:var(--s-smhi)"></i>SMHI</span><span><i class="ln dash" style="border-color:var(--s-smhi)"></i>SMHI byar</span><span><i class="ln" style="border-color:var(--s-yr)"></i>YR</span></div>
         <div class="box"><canvas id="c4"></canvas></div></div>
     </div>
     <div class="tblwrap"><details><summary>Visa som tabell</summary>
       <table><thead><tr><th>Dag</th><th>Snödjup</th><th>Nederbörd mm</th><th>Snö SMHI</th><th>Snö YR</th><th>Snöchans SMHI / YR</th><th>Min °C</th><th>Max °C</th><th>Vind m/s</th><th>Byar</th><th>Vindriktning</th></tr></thead><tbody>
-      ${DATA.PD.map((d,i)=>`<tr class="${i===9?'today':''}"><td>${wd(d)} (uppmätt)</td><td>${fmt(col('sd')[i])}</td><td>${fmt(col('p')[i],1)}</td><td>–</td><td>–</td><td>–</td><td>${fmt(col('tn')[i],1)}</td><td>${fmt(col('tx')[i],1)}</td><td>${fmt(col('w')[i],1)}</td><td>–</td><td>–</td></tr>`).join('')}
+      ${DATA.PD.map((d,i)=>`<tr class="${i===9?'today':''}"><td>${wd(d)} (uppmätt)</td><td>${fmt(col('sd')[i])}</td><td>${fmt(col('p')[i],1)}</td><td>–</td><td>–</td><td>–</td><td>${fmt(col('tn')[i],1)}</td><td>${fmt(col('tx')[i],1)}</td><td>${fmt(col('w')[i],1)}</td><td>–</td><td>${wdTxt(obsD[i])}</td></tr>`).join('')}
       ${DATA.FD.map((d,i)=>`<tr><td>${wd(d)}</td><td>–</td><td>${fmt(sm[i]?.[1],1)}</td><td>${fmt(sm[i]?.[0],1)}</td><td>${fmt(yr[i]?.[0],1)}</td><td>${sm[i]?.[6]!=null?sm[i][6]+' %':'–'} / ${yr[i]?.[6]!=null?yr[i][6]+' %':'–'}</td><td>${fmt(sm[i]?.[2],1)}</td><td>${fmt(sm[i]?.[3],1)}</td><td>${fmt(sm[i]?.[4],1)}</td><td>${fmt(sm[i]?.[5],1)}</td><td>${wdTxt(sm[i]?.[7]??yr[i]?.[7])}</td></tr>`).join('')}
       </tbody></table></details></div>
     <div class="stn">Mätstationer: snödjup ${st('sd')} · nederbörd ${st('p')} · temperatur ${st('tn')} · vind ${st('w')}.</div>`;
@@ -1159,11 +1160,17 @@ function openDetail(l){
     options:base('°C',false),plugins:[todayLine,{id:'zero',beforeDatasetsDraw(c){const y=c.scales.y.getPixelForValue(0);const {left,right}=c.chartArea;if(y<c.chartArea.top||y>c.chartArea.bottom)return;const g=c.ctx;g.save();g.strokeStyle=ink3;g.lineWidth=1;g.beginPath();g.moveTo(left,y);g.lineTo(right,y);g.stroke();g.restore();}}]}));
 
   const dirS=[...nul,...F(sm,7)], dirY=[...nul,...F(yr,7)];
-  const arrows={id:'arrows',afterDatasetsDraw(c){const g=c.ctx, x=c.scales.x, y0=c.chartArea.top+30;
-    for(let i=10;i<20;i++){const d=dirS[i]??dirY[i]; if(d==null) continue; const px=x.getPixelForValue(i); g.save(); g.translate(px,y0); g.rotate(((d+180)%360)*Math.PI/180);
-      g.strokeStyle=ink2; g.fillStyle=ink2; g.lineWidth=1.8; g.beginPath(); g.moveTo(0,7); g.lineTo(0,-5); g.stroke(); g.beginPath(); g.moveTo(0,-8); g.lineTo(-4,-2.5); g.lineTo(4,-2.5); g.closePath(); g.fill(); g.restore();}}};
-  const w4=base('m/s'); w4.scales.y.grace='45%';
-  w4.plugins.tooltip={callbacks:{label:c=>{ if(c.raw==null) return null; const dir=c.datasetIndex===1?dirS[c.dataIndex]:c.datasetIndex===3?dirY[c.dataIndex]:null; return `${c.dataset.label}: ${fmt(c.raw,1)} m/s${dir!=null?' från '+comp(dir):''}`; }}};
+  const obsW=col('w');
+  const arrows={id:'arrows',afterDatasetsDraw(c){const g=c.ctx, x=c.scales.x, y0=c.chartArea.top-38;
+    for(let i=0;i<20;i++){
+      const d=i<10?obsD[i]:(dirS[i]??dirY[i]); const sp=i<10?obsW[i]:(sm[i-10]?.[4]??yr[i-10]?.[4]); if(d==null&&sp==null) continue;
+      const px=x.getPixelForValue(i), colr=i<10?cO:ink2;
+      if(d!=null){ g.save(); g.translate(px,y0); g.rotate(((d+180)%360)*Math.PI/180);
+        g.strokeStyle=colr; g.fillStyle=colr; g.lineWidth=1.8; g.beginPath(); g.moveTo(0,7); g.lineTo(0,-5); g.stroke(); g.beginPath(); g.moveTo(0,-8); g.lineTo(-4,-2.5); g.lineTo(4,-2.5); g.closePath(); g.fill(); g.restore(); }
+      if(sp!=null){ g.save(); g.fillStyle=colr; g.font='600 10px Inter, system-ui, sans-serif'; g.textAlign='center'; g.textBaseline='top'; g.fillText(Math.round(sp),px,y0+12); g.restore(); }
+    }}};
+  const w4=base('m/s'); w4.layout={padding:{top:54,right:8}};
+  w4.plugins.tooltip={callbacks:{label:c=>{ if(c.raw==null) return null; const dir=c.datasetIndex===0?obsD[c.dataIndex]:c.datasetIndex===1?dirS[c.dataIndex]:c.datasetIndex===3?dirY[c.dataIndex]:null; return `${c.dataset.label}: ${fmt(c.raw,1)} m/s${dir!=null?' från '+comp(dir):''}`; }}};
   charts.push(new Chart(document.getElementById('c4'),{data:{labels,datasets:[
     lineDs('Uppmätt',[...col('w'),...nul],cO,false), lineDs('SMHI',[...nul,...F(sm,4)],cS,false),
     lineDs('SMHI byar',[...nul,...F(sm,5)],cS,true,{borderWidth:1.5}), lineDs('YR',[...nul,...F(yr,4)],cY,false)]},
