@@ -194,6 +194,22 @@ const prevSg=prev?.sg||null;
 await new Promise(r=>setTimeout(r,65000)); // låt Open-Meteos minutgräns återställas efter ensemblen
 let sg=null; try{ sg=await snowGrid(); }catch(e){ console.error('Snödjupsrutnät misslyckades', e); }
 if(!sg) console.error('Behåller tidigare snödjupsrutnät.');
+// --- Vind i rutnät (Windy-liknande vindkarta): morgondagens max medelvind och dominerande riktning ---
+async function windGrid(){
+  const la0=55.25,lo0=4.5,dla=0.75,dlo=1.5,nla=22,nlo=19, N=nla*nlo, sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  const s=new Array(N).fill(null), dd=new Array(N).fill(null); let day=null, ok=0;
+  for(let b=0;b<N;b+=100){
+    const ch=[...Array(Math.min(100,N-b)).keys()].map(i=>b+i);
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${ch.map(k=>(la0+Math.floor(k/nlo)*dla).toFixed(2)).join(',')}&longitude=${ch.map(k=>(lo0+(k%nlo)*dlo).toFixed(2)).join(',')}&daily=wind_speed_10m_max,wind_direction_10m_dominant&wind_speed_unit=ms&timezone=Europe%2FStockholm&forecast_days=2`;
+    let j=null;
+    for(let t=0;t<3&&!j;t++){ try{const r=await fetch(u,{headers:{'User-Agent':'POW-WOW/1.0 github.com/davidgrehn-ui/POW-WOW'}}); if(r.ok) j=await r.json(); else await sleep(15000);}catch(e){await sleep(5000)} }
+    (Array.isArray(j)?j:(j?[j]:[])).forEach((x,i)=>{ const D=x?.daily; if(!D) return; day=D.time[1]; const sp=D.wind_speed_10m_max[1], dr=D.wind_direction_10m_dominant[1]; if(sp!=null&&dr!=null){ s[ch[i]]=Math.round(sp*10)/10; dd[ch[i]]=Math.round(dr); ok++; } });
+    await sleep(4000);
+  }
+  return ok>N*0.8 ? {t:new Date().toISOString(),day,la0,lo0,dla,dlo,nla,nlo,s,d:dd} : null;
+}
+let wg=null; try{ await new Promise(r=>setTimeout(r,20000)); wg=await windGrid(); }catch(e){ console.error('Vindrutnät misslyckades', e); }
+d.wg = wg || (prev?.wg?.day===d.FD[0] ? prev.wg : undefined);
 d.sg = sg || prevSg || undefined;
 d.ens = ens || (prev?.ens && prev.FD?.[0]===d.FD[0] ? prev.ens : undefined);
 writeFileSync(new URL('../data.json', import.meta.url), JSON.stringify(d));
