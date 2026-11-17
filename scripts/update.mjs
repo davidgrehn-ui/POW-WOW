@@ -184,6 +184,7 @@ async function ensemble(){
 let ens=null; try{ ens=await ensemble(); }catch(e){ console.error('Ensemble misslyckades', e); }
 let prev=null; try{ prev=JSON.parse(readFileSync(new URL('../data.json', import.meta.url),'utf8')); }catch(e){}
 const prevSg=prev?.sg||null;
+await new Promise(r=>setTimeout(r,65000)); // låt Open-Meteos minutgräns återställas efter ensemblen
 let sg=null; try{ sg=await snowGrid(); }catch(e){ console.error('Snödjupsrutnät misslyckades', e); }
 if(!sg) console.error('Behåller tidigare snödjupsrutnät.');
 d.sg = sg || prevSg || undefined;
