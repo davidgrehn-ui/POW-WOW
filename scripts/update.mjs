@@ -35,6 +35,7 @@ const LOC = [
  ["Källviksbacken",60.565,15.615],
  ["Romme",60.393,15.380],
  ["Flottsbro",59.236,17.888]];
+globalThis.__LOC=LOC;
 const tz='Europe/Stockholm';
 const dstr = d => new Date(d).toLocaleDateString('sv-SE',{timeZone:tz});
 const today = dstr(Date.now());
@@ -158,6 +159,7 @@ async function snowGrid(){
 }
 // --- Sannolikhet: ECMWF ensemble (51 scenarier) via Open-Meteo ---
 async function ensemble(){
+  const LOC=globalThis.__LOC, FD=d.FD;
   const out={}, sleep=ms=>new Promise(r=>setTimeout(r,ms));
   for(let b=0;b<LOC.length;b+=8){
     const ch=LOC.slice(b,b+8);
