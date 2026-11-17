@@ -46,6 +46,14 @@ h1.brand img{border-radius:12px;box-shadow:0 2px 8px rgba(11,31,77,.25)}
 .alert{display:flex;gap:12px;align-items:flex-start;background:var(--alert-bg);border:1px solid var(--alert-line);border-left-width:5px;border-radius:12px;padding:12px 16px;color:var(--alert-ink)}
 .alert b{color:var(--ink)}
 .alert .ic{font-size:20px;line-height:1}
+.prob{font-size:12.5px;color:var(--ink-2);margin:8px 0 2px}
+.prob b{color:var(--ink)}
+.prob .hi{color:#c2410c}
+.wd{display:inline-block;line-height:1;font-weight:700;color:var(--ink-2)}
+.pstrip{display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-top:10px}
+.pstrip div{border-radius:6px;padding:4px 0;text-align:center;font-size:11px;line-height:1.25;color:var(--ink-2);background:#f1f5fa}
+.pstrip div b{display:block;font-size:12.5px;color:var(--ink)}
+.pstrip div.p2{background:#dbe9fb}.pstrip div.p3{background:#86b6ef}.pstrip div.p4{background:#2a78d6;color:#fff}.pstrip div.p4 b{color:#fff}
 .notify{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin:10px 0 16px;color:var(--ink-2)}
 .notify summary{cursor:pointer;padding:12px 16px;font-weight:700;color:var(--ink);list-style:none}
 .notify summary::-webkit-details-marker{display:none}
@@ -911,28 +919,33 @@ async function liveRefresh(){
   const FD=[...Array(10)].map((_,i)=>addDays(today,i+1));
   const r1=x=>x==null||!isFinite(x)?null:Math.round(x*10)/10;
   const J=async u=>{try{const r=await fetch(u);return r.ok?await r.json():null}catch(e){return null}};
-  const E=()=>({tn:null,tx:null,w:null,g:null,p:0,s:0});
+  const E=()=>({tn:null,tx:null,w:null,g:null,p:0,s:0,pr:0,wd:null});
   async function smhi(lat,lon){const j=await J(`https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${lon}/lat/${lat}/data.json`);if(!j)return null;
     const days=Object.fromEntries(FD.map(d=>[d,E()]));
     for(const t of j.timeSeries){const dd=t.data,end=Date.parse(t.time),st=Date.parse(t.intervalParametersStartTime||t.time);const D=days[dstr((st+end)/2)];if(!D)continue;const T=dd.air_temperature;
       if(T!=null){D.tn=D.tn==null?T:Math.min(D.tn,T);D.tx=D.tx==null?T:Math.max(D.tx,T)}
-      if(dd.wind_speed!=null)D.w=Math.max(D.w??0,dd.wind_speed);if(dd.wind_speed_of_gust!=null)D.g=Math.max(D.g??0,dd.wind_speed_of_gust);
-      const p=Math.max(0,dd.precipitation_amount_mean??0);D.p+=p;let f=dd.precipitation_frozen_part;f=(f==null||f<0)?(T<=0.5?1:T>=2?0:(2-T)/1.5):f/100;D.s+=p*f;}
-    return FD.map(d=>{const D=days[d];return [r1(D.s),r1(D.p),r1(D.tn),r1(D.tx),r1(D.w),r1(D.g)]});}
+      if(dd.wind_speed!=null){if(dd.wind_from_direction!=null&&dd.wind_speed>=(D.w??-1))D.wd=dd.wind_from_direction;D.w=Math.max(D.w??0,dd.wind_speed);}if(dd.wind_speed_of_gust!=null)D.g=Math.max(D.g??0,dd.wind_speed_of_gust);
+      const p=Math.max(0,dd.precipitation_amount_mean??0);D.p+=p;let f=dd.precipitation_frozen_part;f=(f==null||f<0)?(T<=0.5?1:T>=2?0:(2-T)/1.5):f/100;D.s+=p*f;if(dd.probability_of_precipitation!=null)D.pr=Math.max(D.pr,dd.probability_of_precipitation*f);}
+    return FD.map(d=>{const D=days[d];return [r1(D.s),r1(D.p),r1(D.tn),r1(D.tx),r1(D.w),r1(D.g),Math.round(D.pr),D.wd==null?null:Math.round(D.wd)]});}
   async function yr(lat,lon){const j=await J(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}`);if(!j)return null;
     const ts=j.properties.timeseries,days=Object.fromEntries(FD.map(d=>[d,E()]));let covered=0;
     for(let i=0;i<ts.length;i++){const t=ts[i],tm=Date.parse(t.time),nx=i+1<ts.length?Date.parse(ts[i+1].time):tm+6*3600e3;const inst=t.data.instant.details;const D=days[dstr(tm)];
-      if(D){const T=inst.air_temperature;D.tn=D.tn==null?T:Math.min(D.tn,T);D.tx=D.tx==null?T:Math.max(D.tx,T);D.w=Math.max(D.w??0,inst.wind_speed??0);if(inst.wind_speed_of_gust!=null)D.g=Math.max(D.g??0,inst.wind_speed_of_gust);}
+      if(D){const T=inst.air_temperature;D.tn=D.tn==null?T:Math.min(D.tn,T);D.tx=D.tx==null?T:Math.max(D.tx,T);if(inst.wind_from_direction!=null&&(inst.wind_speed??0)>=(D.w??-1))D.wd=inst.wind_from_direction;D.w=Math.max(D.w??0,inst.wind_speed??0);if(inst.wind_speed_of_gust!=null)D.g=Math.max(D.g??0,inst.wind_speed_of_gust);}
       if(tm<covered)continue;let p=null,len=0;
       if(nx-tm<=3600e3&&t.data.next_1_hours){p=t.data.next_1_hours.details.precipitation_amount;len=1}else if(t.data.next_6_hours){p=t.data.next_6_hours.details.precipitation_amount;len=6}
-      if(p==null)continue;covered=tm+len*3600e3;const Dp=days[dstr(tm+len*1800e3)];if(!Dp)continue;const T=inst.air_temperature,f=T<=0.5?1:T>=2?0:(2-T)/1.5;Dp.p+=p;Dp.s+=p*f;}
-    return FD.map(d=>{const D=days[d];return D.tn==null?null:[r1(D.s),r1(D.p),r1(D.tn),r1(D.tx),r1(D.w),r1(D.g)]});}
+      if(p==null)continue;covered=tm+len*3600e3;const Dp=days[dstr(tm+len*1800e3)];if(!Dp)continue;const T=inst.air_temperature,f=T<=0.5?1:T>=2?0:(2-T)/1.5;Dp.p+=p;Dp.s+=p*f;{const pq=(len===1?t.data.next_1_hours:t.data.next_6_hours).details.probability_of_precipitation;if(pq!=null)Dp.pr=Math.max(Dp.pr,pq*f);}}
+    return FD.map(d=>{const D=days[d];return D.tn==null?null:[r1(D.s),r1(D.p),r1(D.tn),r1(D.tx),r1(D.w),r1(D.g),Math.round(D.pr),D.wd==null?null:Math.round(D.wd)]});}
   const res=await Promise.all(DATA.loc.map(async l=>{const c=COORD[l.n];if(!c)return [null,null];return Promise.all([smhi(c[0],c[1]),yr(c[0],c[1])]);}));
   let ok=0; res.forEach(([s,y],i)=>{if(s){DATA.loc[i].smhi=s;ok++} if(y)DATA.loc[i].yr=y;});
   if(ok>DATA.loc.length/2){ DATA.FD=FD; LIVE=new Date(); }
 }
 const ageH=(Date.now()-Date.parse(DATA.gen))/36e5;
 if(ageH>3 && /github\.io$/.test(location.hostname)){ document.getElementById('grid').innerHTML='<div class="ok">Hämtar senaste prognoserna från SMHI och YR…</div>'; await Promise.race([liveRefresh(), new Promise(r=>setTimeout(r,12000))]); }
+const DIRS=['N','NO','O','SO','S','SV','V','NV'];
+const comp=d=>d==null?'':DIRS[Math.round(((d%360)+360)%360/45)%8];
+const arrow=d=>d==null?'':`<span class="wd" style="transform:rotate(${(d+180)%360}deg)" aria-hidden="true">↑</span>`;
+const wdTxt=d=>d==null?'–':`${arrow(d)} ${comp(d)}`;
+const ENS=DATA.ens&&DATA.ens.loc||{};
 const L = DATA.loc.map(l => {
   const s = sum(l.smhi), y = sum(l.yr);
   const sd = lastVal(l.obs.sd && l.obs.sd.v);
@@ -940,7 +953,8 @@ const L = DATA.loc.map(l => {
   const tmin = Math.min(...f.filter(Boolean).map(d=>d[2])), tmax = Math.max(...f.filter(Boolean).map(d=>d[3]));
   const wmax = Math.max(...f.filter(Boolean).map(d=>d[4]));
   const gmax = Math.max(...(l.smhi||[]).map(d=>d[5]||0));
-  return {...l, s10:s, y10:y, best:Math.max(s,y), sd, tmin, tmax, wmax, gmax, reg:META[l.n]?.[0]||'', id:META[l.n]?.[1]||l.n};
+  const fw = f.filter(Boolean); const iw = fw.reduce((b,d,i)=>d[4]>(fw[b]?.[4]??-1)?i:b,0); const wdir = fw[iw]?.[7] ?? null;
+  return {...l, ens:ENS[l.n]||null, wdir, s10:s, y10:y, best:Math.max(s,y), sd, tmin, tmax, wmax, gmax, reg:META[l.n]?.[0]||'', id:META[l.n]?.[1]||l.n};
 });
 
 document.getElementById('sub').textContent =
@@ -949,7 +963,7 @@ document.getElementById('sub').textContent =
 // alerts
 const hot = L.filter(l=>l.best>LIMIT).sort((a,b)=>b.best-a.best);
 document.getElementById('alerts').innerHTML = hot.length
-  ? hot.map(l=>`<div class="alert"><div class="ic">⚠️</div><div><b>${l.n}</b> väntas få <b>${fmt(l.best)} cm</b> snö kommande 10 dagar (SMHI ${fmt(l.s10)} cm · YR ${fmt(l.y10)} cm).</div></div>`).join('')
+  ? hot.map(l=>`<div class="alert"><div class="ic">⚠️</div><div><b>${l.n}</b> väntas få <b>${fmt(l.best)} cm</b> snö kommande 10 dagar (SMHI ${fmt(l.s10)} cm · YR ${fmt(l.y10)} cm)${l.ens?`. Chans för mer än ${LIMIT} cm: <b>${l.ens.p30} %</b>`:''}.</div></div>`).join('')
   : `<div class="ok">Ingen ort väntas få mer än ${LIMIT} cm snö de kommande 10 dagarna. Mest snö: <b>${[...L].sort((a,b)=>b.best-a.best)[0].n}</b> (${fmt([...L].sort((a,b)=>b.best-a.best)[0].best)} cm).</div>`;
 
 let sortKey = 'geo';
@@ -969,12 +983,13 @@ function render(){
       <div class="big"><span class="v">${fmt(l.s10)}</span><span class="u">cm nysnö / 10 d (SMHI)</span></div>
       <div class="src"><span><i class="dot" style="background:var(--s-smhi)"></i>SMHI ${fmt(l.s10,1)}</span><span><i class="dot" style="background:var(--s-yr)"></i>YR ${fmt(l.y10,1)}</span></div>
       <div class="meter" title="Andel av larmgränsen ${LIMIT} cm"><i style="width:${pct}%"></i></div>
+      ${l.ens?`<div class="prob">Chans &gt;${LIMIT} cm: <b class="${l.ens.p30>=50?'hi':''}">${l.ens.p30} %</b> · troligt ${l.ens.q10}–${l.ens.q90} cm</div>`:''}
       <div class="lbl">Snöfall per dag, kommande 10 dagar</div>
       <div class="spark">${bars}</div>
       <div class="stats">
         <div>Snödjup<b>${l.sd?fmt(l.sd.v)+' cm':'–'}</b></div>
         <div>Temp<b>${fmt(l.tmin)}…${fmt(l.tmax)}°</b></div>
-        <div>Vind max<b>${fmt(l.wmax)} m/s</b></div>
+        <div>Vind max<b>${fmt(l.wmax)} m/s ${arrow(l.wdir)}${comp(l.wdir)}</b></div>
       </div>
     </button>`;
   }).join('');
@@ -1086,26 +1101,29 @@ function openDetail(l){
       <div class="kpi"><div class="v">${l.sd?fmt(l.sd.v)+' cm':'–'}</div><div class="l">Snödjup senast uppmätt${l.sd?' ('+wd(DATA.PD[l.sd.i])+')':''}</div></div>
       <div class="kpi"><div class="v">${fmt(l.s10)} / ${fmt(l.y10)} cm</div><div class="l">Nysnö 10 d · SMHI / YR</div></div>
       <div class="kpi"><div class="v">${fmt(l.tmin)}…${fmt(l.tmax)}°</div><div class="l">Temperatur kommande 10 d</div></div>
-      <div class="kpi"><div class="v">${fmt(l.wmax)} m/s</div><div class="l">Max medelvind (byar ${fmt(l.gmax)} m/s)</div></div>
+      <div class="kpi"><div class="v">${fmt(l.wmax)} m/s ${arrow(l.wdir)}${comp(l.wdir)}</div><div class="l">Max medelvind (byar ${fmt(l.gmax)} m/s)</div></div>
+      ${l.ens?`<div class="kpi"><div class="v">${l.ens.p30} %</div><div class="l">Chans för mer än ${LIMIT} cm (≥10 cm: ${l.ens.p10} %). Troligt ${l.ens.q10}–${l.ens.q90} cm, median ${l.ens.q50} cm</div></div>`:''}
     </div>
     <div class="charts">
       <div class="ch"><h4>Snöfall per dag</h4><p>Historik: närmaste mätstation, uppskattat från nederbörd och temperatur. Prognos: SMHI och YR.</p>
         <div class="legend"><span><i class="sw" style="background:var(--s-obs)"></i>Uppmätt</span><span><i class="sw" style="background:var(--s-smhi)"></i>SMHI</span><span><i class="sw" style="background:var(--s-yr)"></i>YR</span></div>
-        <div class="box"><canvas id="c1"></canvas></div></div>
+        <div class="box"><canvas id="c1"></canvas></div>
+        <h4 style="margin-top:14px">Chans för snöfall per dag</h4><p>${l.ens?'Andel av ECMWF:s 51 scenarier med minst 1 cm snö.':'Högsta sannolikhet för snöfall under dygnet enligt SMHI.'}</p>
+        <div class="pstrip">${DATA.FD.map((d,i)=>{const v=l.ens?l.ens.day?.[i]:sm[i]?.[6]; const c=v==null?'':v>=75?'p4':v>=50?'p3':v>=25?'p2':''; return `<div class="${c}">${wd(d).split(' ')[0]}<b>${v==null?'–':v+'%'}</b></div>`;}).join('')}</div></div>
       <div class="ch"><h4>Snödjup</h4><p>${o.sd?`Uppmätt vid ${st('sd')}. Prognosdelen visar ackumulerad nysnö ovanpå senaste mätning (utan hänsyn till sättning).`:'Ingen mätstation i närheten. Kurvan visar enbart ackumulerad nysnö enligt prognos.'}</p>
         <div class="legend"><span><i class="ln" style="border-color:var(--s-obs)"></i>Uppmätt</span><span><i class="ln dash" style="border-color:var(--s-smhi)"></i>+ SMHI-prognos</span><span><i class="ln dash" style="border-color:var(--s-yr)"></i>+ YR-prognos</span></div>
         <div class="box"><canvas id="c2"></canvas></div></div>
       <div class="ch"><h4>Temperatur (°C)</h4><p>Dygnets max och min. Historik: ${st('tx')}.</p>
         <div class="legend"><span><i class="ln" style="border-color:var(--t-max)"></i>Max</span><span><i class="ln" style="border-color:var(--t-min)"></i>Min</span><span><i class="ln dash" style="border-color:var(--ink-3)"></i>YR (streckad)</span></div>
         <div class="box"><canvas id="c3"></canvas></div></div>
-      <div class="ch"><h4>Vind (m/s)</h4><p>Högsta medelvind per dygn. Historik: ${st('w')}.</p>
+      <div class="ch"><h4>Vind (m/s)</h4><p>Högsta medelvind per dygn. Pilarna visar vart vinden blåser (riktningen när vinden är som starkast). Historik: ${st('w')}.</p>
         <div class="legend"><span><i class="ln" style="border-color:var(--s-obs)"></i>Uppmätt</span><span><i class="ln" style="border-color:var(--s-smhi)"></i>SMHI</span><span><i class="ln dash" style="border-color:var(--s-smhi)"></i>SMHI byar</span><span><i class="ln" style="border-color:var(--s-yr)"></i>YR</span></div>
         <div class="box"><canvas id="c4"></canvas></div></div>
     </div>
     <div class="tblwrap"><details><summary>Visa som tabell</summary>
-      <table><thead><tr><th>Dag</th><th>Snödjup</th><th>Nederbörd mm</th><th>Snö SMHI</th><th>Snö YR</th><th>Min °C</th><th>Max °C</th><th>Vind m/s</th><th>Byar</th></tr></thead><tbody>
-      ${DATA.PD.map((d,i)=>`<tr class="${i===9?'today':''}"><td>${wd(d)} (uppmätt)</td><td>${fmt(col('sd')[i])}</td><td>${fmt(col('p')[i],1)}</td><td>–</td><td>–</td><td>${fmt(col('tn')[i],1)}</td><td>${fmt(col('tx')[i],1)}</td><td>${fmt(col('w')[i],1)}</td><td>–</td></tr>`).join('')}
-      ${DATA.FD.map((d,i)=>`<tr><td>${wd(d)}</td><td>–</td><td>${fmt(sm[i]?.[1],1)}</td><td>${fmt(sm[i]?.[0],1)}</td><td>${fmt(yr[i]?.[0],1)}</td><td>${fmt(sm[i]?.[2],1)}</td><td>${fmt(sm[i]?.[3],1)}</td><td>${fmt(sm[i]?.[4],1)}</td><td>${fmt(sm[i]?.[5],1)}</td></tr>`).join('')}
+      <table><thead><tr><th>Dag</th><th>Snödjup</th><th>Nederbörd mm</th><th>Snö SMHI</th><th>Snö YR</th><th>Snöchans SMHI / YR</th><th>Min °C</th><th>Max °C</th><th>Vind m/s</th><th>Byar</th><th>Vindriktning</th></tr></thead><tbody>
+      ${DATA.PD.map((d,i)=>`<tr class="${i===9?'today':''}"><td>${wd(d)} (uppmätt)</td><td>${fmt(col('sd')[i])}</td><td>${fmt(col('p')[i],1)}</td><td>–</td><td>–</td><td>–</td><td>${fmt(col('tn')[i],1)}</td><td>${fmt(col('tx')[i],1)}</td><td>${fmt(col('w')[i],1)}</td><td>–</td><td>–</td></tr>`).join('')}
+      ${DATA.FD.map((d,i)=>`<tr><td>${wd(d)}</td><td>–</td><td>${fmt(sm[i]?.[1],1)}</td><td>${fmt(sm[i]?.[0],1)}</td><td>${fmt(yr[i]?.[0],1)}</td><td>${sm[i]?.[6]!=null?sm[i][6]+' %':'–'} / ${yr[i]?.[6]!=null?yr[i][6]+' %':'–'}</td><td>${fmt(sm[i]?.[2],1)}</td><td>${fmt(sm[i]?.[3],1)}</td><td>${fmt(sm[i]?.[4],1)}</td><td>${fmt(sm[i]?.[5],1)}</td><td>${wdTxt(sm[i]?.[7]??yr[i]?.[7])}</td></tr>`).join('')}
       </tbody></table></details></div>
     <div class="stn">Mätstationer: snödjup ${st('sd')} · nederbörd ${st('p')} · temperatur ${st('tn')} · vind ${st('w')}.</div>`;
   document.getElementById('cl').onclick=closeDetail;
@@ -1140,10 +1158,16 @@ function openDetail(l){
     lineDs('YR max',[...nul,...F(yr,3)],cMax,true,{borderWidth:1.5}), lineDs('YR min',[...nul,...F(yr,2)],cMin,true,{borderWidth:1.5})]},
     options:base('°C',false),plugins:[todayLine,{id:'zero',beforeDatasetsDraw(c){const y=c.scales.y.getPixelForValue(0);const {left,right}=c.chartArea;if(y<c.chartArea.top||y>c.chartArea.bottom)return;const g=c.ctx;g.save();g.strokeStyle=ink3;g.lineWidth=1;g.beginPath();g.moveTo(left,y);g.lineTo(right,y);g.stroke();g.restore();}}]}));
 
+  const dirS=[...nul,...F(sm,7)], dirY=[...nul,...F(yr,7)];
+  const arrows={id:'arrows',afterDatasetsDraw(c){const g=c.ctx; const ds=c.data.datasets; [[1,dirS,cS],[3,dirY,cY]].forEach(([di,dirs,colr])=>{const meta=c.getDatasetMeta(di); if(meta.hidden) return;
+    meta.data.forEach((pt,i)=>{const d=dirs[i]; if(d==null||ds[di].data[i]==null) return; g.save(); g.translate(pt.x,pt.y-(di===1?12:-12)); g.rotate(((d+180)%360)*Math.PI/180);
+      g.strokeStyle=colr; g.fillStyle=colr; g.lineWidth=1.6; g.beginPath(); g.moveTo(0,6); g.lineTo(0,-5); g.stroke(); g.beginPath(); g.moveTo(0,-7); g.lineTo(-3.5,-2); g.lineTo(3.5,-2); g.closePath(); g.fill(); g.restore();});});}};
+  const w4=base('m/s'); w4.layout={padding:{top:26,bottom:4}};
+  w4.plugins.tooltip={callbacks:{label:c=>{ if(c.raw==null) return null; const dir=c.datasetIndex===1?dirS[c.dataIndex]:c.datasetIndex===3?dirY[c.dataIndex]:null; return `${c.dataset.label}: ${fmt(c.raw,1)} m/s${dir!=null?' från '+comp(dir):''}`; }}};
   charts.push(new Chart(document.getElementById('c4'),{data:{labels,datasets:[
     lineDs('Uppmätt',[...col('w'),...nul],cO,false), lineDs('SMHI',[...nul,...F(sm,4)],cS,false),
     lineDs('SMHI byar',[...nul,...F(sm,5)],cS,true,{borderWidth:1.5}), lineDs('YR',[...nul,...F(yr,4)],cY,false)]},
-    options:base('m/s'),plugins:[todayLine]}));
+    options:w4,plugins:[todayLine,arrows]}));
 }
 route();
 window.__render=render;
@@ -1152,7 +1176,7 @@ document.getElementById('foot').innerHTML = `
   Nysnö räknas som nederbörd i fast form, 1 mm vatten ≈ 1 cm snö (SMHI anger andel fast nederbörd; för YR används temperaturen).
   Faktisk nysnö kan bli mer i kallt, torrt väder och mindre i blöt snö. Historik och snödjup kommer från närmaste aktiva SMHI-station, för de norska orterna från MET Norges stationer (Frost API)
   – stationerna kan ligga en bit från skidområdet och lägre i terrängen. Larmgräns: över ${LIMIT} cm enligt SMHI eller YR under 10 dagar.
-  Klicka på en ort för grafer. Källor: <a href="https://www.smhi.se/data" target="_blank" rel="noopener">SMHI Öppna data</a> · <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (snödjupskartan, modellberäknat i ca 25 km rutor) ·
+  Klicka på en ort för grafer. Källor: <a href="https://www.smhi.se/data" target="_blank" rel="noopener">SMHI Öppna data</a> · <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (snödjupskartan, modellberäknat i ca 25 km rutor, samt sannolikheter från ECMWF:s ensembleprognos med 51 scenarier) ·
   <a href="https://www.yr.no" target="_blank" rel="noopener">YR (met.no)</a>.`;
 })();
 </script>

@@ -45,7 +45,7 @@ const r1=x=>x==null||!isFinite(x)?null:Math.round(x*10)/10;
 const hav=(a,b,c,d)=>{const R=6371,t=Math.PI/180;const x=Math.sin((c-a)*t/2)**2+Math.cos(a*t)*Math.cos(c*t)*Math.sin((d-b)*t/2)**2;return 2*R*Math.asin(Math.sqrt(x))};
 const UA={'User-Agent':'POW-WOW/1.0 github.com/davidgrehn-ui/POW-WOW'};
 const J=async u=>{for(let i=0;i<3;i++){try{const r=await fetch(u,{headers:UA});if(r.ok)return await r.json();if(r.status===404)return null}catch(e){}await new Promise(s=>setTimeout(s,800))}return null};
-const emptyDay=()=>({tn:null,tx:null,w:null,g:null,p:0,s:0});
+const emptyDay=()=>({tn:null,tx:null,w:null,g:null,p:0,s:0,pr:0,wd:null});
 
 async function smhi(lat,lon){
   const j=await J(`https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point/lon/${lon}/lat/${lat}/data.json`);
@@ -56,13 +56,13 @@ async function smhi(lat,lon){
     const day=dstr((st+end)/2); const D=days[day]; if(!D) continue;
     const T=dd.air_temperature;
     if(T!=null){D.tn=D.tn==null?T:Math.min(D.tn,T);D.tx=D.tx==null?T:Math.max(D.tx,T)}
-    if(dd.wind_speed!=null)D.w=Math.max(D.w??0,dd.wind_speed);
+    if(dd.wind_speed!=null){if(dd.wind_from_direction!=null&&dd.wind_speed>=(D.w??-1))D.wd=dd.wind_from_direction;D.w=Math.max(D.w??0,dd.wind_speed);}
     if(dd.wind_speed_of_gust!=null)D.g=Math.max(D.g??0,dd.wind_speed_of_gust);
     const p=Math.max(0,dd.precipitation_amount_mean??0); D.p+=p;
     let f=dd.precipitation_frozen_part; f=(f==null||f<0)?(T<=0.5?1:T>=2?0:(2-T)/1.5):f/100;
-    D.s+=p*f; // ~1 mm vatten = ~1 cm snö
+    D.s+=p*f;if(dd.probability_of_precipitation!=null)D.pr=Math.max(D.pr,dd.probability_of_precipitation*f); // ~1 mm vatten = ~1 cm snö
   }
-  return FD.map(d=>{const D=days[d];return [r1(D.s),r1(D.p),r1(D.tn),r1(D.tx),r1(D.w),r1(D.g)]});
+  return FD.map(d=>{const D=days[d];return [r1(D.s),r1(D.p),r1(D.tn),r1(D.tx),r1(D.w),r1(D.g),Math.round(D.pr),D.wd==null?null:Math.round(D.wd)]});
 }
 async function yr(lat,lon){
   const j=await J(`https://api.met.no/weatherapi/locationforecast/2.0/complete?lat=${lat.toFixed(3)}&lon=${lon.toFixed(3)}`);
@@ -73,7 +73,7 @@ async function yr(lat,lon){
     const t=ts[i], tm=Date.parse(t.time), nx=i+1<ts.length?Date.parse(ts[i+1].time):tm+6*3600e3;
     const inst=t.data.instant.details; const D=days[dstr(tm)];
     if(D){const T=inst.air_temperature;D.tn=D.tn==null?T:Math.min(D.tn,T);D.tx=D.tx==null?T:Math.max(D.tx,T);
-      D.w=Math.max(D.w??0,inst.wind_speed??0); if(inst.wind_speed_of_gust!=null)D.g=Math.max(D.g??0,inst.wind_speed_of_gust);}
+      if(inst.wind_from_direction!=null&&(inst.wind_speed??0)>=(D.w??-1))D.wd=inst.wind_from_direction;D.w=Math.max(D.w??0,inst.wind_speed??0); if(inst.wind_speed_of_gust!=null)D.g=Math.max(D.g??0,inst.wind_speed_of_gust);}
     if(tm<covered) continue;
     let p=null,len=0;
     if(nx-tm<=3600e3&&t.data.next_1_hours){p=t.data.next_1_hours.details.precipitation_amount;len=1}
@@ -81,9 +81,9 @@ async function yr(lat,lon){
     if(p==null) continue; covered=tm+len*3600e3;
     const Dp=days[dstr(tm+len*1800e3)]; if(!Dp) continue;
     const T=inst.air_temperature; const f=T<=0.5?1:T>=2?0:(2-T)/1.5;
-    Dp.p+=p; Dp.s+=p*f;
+    Dp.p+=p; Dp.s+=p*f;{const pq=(len===1?t.data.next_1_hours:t.data.next_6_hours).details.probability_of_precipitation;if(pq!=null)Dp.pr=Math.max(Dp.pr,pq*f);}
   }
-  return FD.map(d=>{const D=days[d];return D.tn==null?null:[r1(D.s),r1(D.p),r1(D.tn),r1(D.tx),r1(D.w),r1(D.g)]});
+  return FD.map(d=>{const D=days[d];return D.tn==null?null:[r1(D.s),r1(D.p),r1(D.tn),r1(D.tx),r1(D.w),r1(D.g),Math.round(D.pr),D.wd==null?null:Math.round(D.wd)]});
 }
 // observations
 const PAR={sd:8,p:5,tn:19,tx:20,w:4};
@@ -156,11 +156,36 @@ async function snowGrid(){
   }
   return ok>M.idx.length*0.8 ? {t:new Date().toISOString(),la0:M.la0,lo0:M.lo0,dla:M.dla,dlo:M.dlo,nla:M.nla,nlo:M.nlo,v} : null;
 }
+// --- Sannolikhet: ECMWF ensemble (51 scenarier) via Open-Meteo ---
+async function ensemble(){
+  const out={}, sleep=ms=>new Promise(r=>setTimeout(r,ms));
+  for(let b=0;b<LOC.length;b+=8){
+    const ch=LOC.slice(b,b+8);
+    const u=`https://ensemble-api.open-meteo.com/v1/ensemble?latitude=${ch.map(x=>x[1]).join(',')}&longitude=${ch.map(x=>x[2]).join(',')}&daily=snowfall_sum&models=ecmwf_ifs025&forecast_days=12&timezone=Europe%2FStockholm`;
+    let j=null;
+    for(let t=0;t<3&&!j;t++){ try{const r=await fetch(u,{headers:{'User-Agent':'POW-WOW/1.0 github.com/davidgrehn-ui/POW-WOW'}}); if(r.ok) j=await r.json(); else await sleep(15000);}catch(e){await sleep(5000)} }
+    const arr=Array.isArray(j)?j:(j?[j]:[]);
+    arr.forEach((x,i)=>{
+      const n=ch[i]?.[0]; const dl=x?.daily; if(!n||!dl) return;
+      const ks=Object.keys(dl).filter(k=>k.startsWith('snowfall_sum')); if(ks.length<10) return;
+      const i0=dl.time.indexOf(FD[0]); if(i0<0) return;
+      // Open-Meteo: cm snö = mm vatten × 0,7. Appen räknar 1 mm = 1 cm, så dela med 0,7.
+      const tot=ks.map(k=>dl[k].slice(i0,i0+10).reduce((a,v)=>a+(v||0),0)/0.7).sort((a,b)=>a-b);
+      const q=p=>Math.round(tot[Math.round(p*(tot.length-1))]), pr=th=>Math.round(100*tot.filter(v=>v>th).length/tot.length);
+      const day=FD.map((_,k)=>Math.round(100*ks.filter(m=>(dl[m][i0+k]||0)/0.7>=1).length/ks.length));
+      out[n]={p10:pr(10),p30:pr(30),q10:q(.1),q50:q(.5),q90:q(.9),m:ks.length,day};
+    });
+    await sleep(2000);
+  }
+  return Object.keys(out).length>LOC.length*0.6 ? {t:new Date().toISOString(),src:'ECMWF ENS',loc:out} : null;
+}
+let ens=null; try{ ens=await ensemble(); }catch(e){ console.error('Ensemble misslyckades', e); }
 let prev=null; try{ prev=JSON.parse(readFileSync(new URL('../data.json', import.meta.url),'utf8')); }catch(e){}
 const prevSg=prev?.sg||null;
 let sg=null; try{ sg=await snowGrid(); }catch(e){ console.error('Snödjupsrutnät misslyckades', e); }
 if(!sg) console.error('Behåller tidigare snödjupsrutnät.');
 d.sg = sg || prevSg || undefined;
+d.ens = ens || (prev?.ens && prev.FD?.[0]===d.FD[0] ? prev.ens : undefined);
 writeFileSync(new URL('../data.json', import.meta.url), JSON.stringify(d));
 console.log('Skrev data.json', d.gen);
 
@@ -176,7 +201,7 @@ const morning = !prev?.gen || dSE(prev.gen) !== dSE(Date.now());
 const fresh = [...now.keys()].filter(n=>!before.has(n));
 const list = morning ? [...now.keys()] : fresh;
 if (list.length) {
-  const line = n => { const v=now.get(n); return `${n.replace(' (Östanbäck)','')}: ${Math.round(v.b)} cm (SMHI ${Math.round(v.s)} · YR ${Math.round(v.y)})`; };
+  const line = n => { const v=now.get(n); const e=d.ens?.loc?.[n]; return `${n.replace(' (Östanbäck)','')}: ${Math.round(v.b)} cm (SMHI ${Math.round(v.s)} · YR ${Math.round(v.y)})${e?` · ${e.p30} % chans >30 cm`:''}`; };
   const sorted = list.sort((a,b)=>now.get(b).b-now.get(a).b);
   const title = morning ? `Snölarm: ${sorted.length} ${sorted.length===1?'ort':'orter'} över ${LIMIT} cm` : `Nytt snölarm: ${sorted.map(n=>n.replace(' (Östanbäck)','')).join(', ')}`;
   const body = sorted.map(line).join('\n') + '\nVäntad nysnö kommande 10 dagar.';
