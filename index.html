@@ -915,6 +915,18 @@ svg.leaflet-image-layer.leaflet-interactive path {
 let DATA;
 try{ DATA = await (await fetch('data.json',{cache:'no-store'})).json(); }
 catch(e){ document.getElementById('grid').innerHTML='<div class="ok">Kunde inte läsa väderdatan. Ladda om sidan.</div>'; return; }
+// --- Auto-uppdatering: när appen kommer tillbaka i förgrunden (och var 5:e minut när den är öppen)
+// kollas om data.json har ändrats; i så fall laddas sidan om. Efter 3 h laddas den om ändå (färska prognoser).
+{ const loadedAt=Date.now(), gen0=DATA.gen; let busy=false;
+  const check=async()=>{ if(busy||document.visibilityState!=='visible') return; busy=true;
+    try{ if(Date.now()-loadedAt>3*3600e3){ location.reload(); return; }
+      const j=await (await fetch('data.json?t='+Date.now(),{cache:'no-store'})).json();
+      if(j?.gen && j.gen!==gen0){ location.reload(); return; } }catch(e){}
+    busy=false; };
+  document.addEventListener('visibilitychange',check);
+  window.addEventListener('pageshow',e=>{ if(e.persisted) check(); });
+  window.addEventListener('focus',check);
+  setInterval(check,5*60e3); }
 const LIMIT = 30;
 const META = {
  "Riksgränsen":["Lappland","riksgransen"],"Björkliden":["Lappland","bjorkliden"],"Abisko":["Lappland","abisko"],"Dundret":["Norrbotten · Gällivare","dundret"],
