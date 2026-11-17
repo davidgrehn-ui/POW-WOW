@@ -1068,7 +1068,7 @@ function snowColor(c){ return c>30?['#eb6834','#fff']:c>=15?['#2a78d6','#fff']:c
       const t=document.createElement('canvas'); t.width=t.height=256; const g=t.getContext('2d'); const z=c.z, ox=c.x*256, oy=c.y*256;
       const img=g.createImageData(256,256), px=img.data, B=4;
       for(let py=0;py<256;py+=B){ const la=map.unproject([ox,oy+py+B/2],z).lat; for(let qx=0;qx<256;qx+=B){ const lo=map.unproject([ox+qx+B/2,oy],z).lng; const w=uv(la,lo); if(!w) continue; const [r,gg,b]=wcol(Math.hypot(w[0],w[1]));
-        for(let yy=py;yy<py+B;yy++) for(let xx=qx;xx<qx+B;xx++){ const k=(yy*256+xx)*4; px[k]=r;px[k+1]=gg;px[k+2]=b;px[k+3]=200; } } }
+        for(let yy=py;yy<py+B;yy++) for(let xx=qx;xx<qx+B;xx++){ const k=(yy*256+xx)*4; px[k]=r;px[k+1]=gg;px[k+2]=b;px[k+3]=110; } } }
       g.putImageData(img,0,0);
       // strömlinjer: frön på ett globalt rutnät så att linjerna hänger ihop mellan rutorna
       const S=26, step=1.6, n=14; g.lineCap='round';
@@ -1076,11 +1076,11 @@ function snowColor(c){ return c>30?['#eb6834','#fff']:c>=15?['#2a78d6','#fff']:c
         let x=gx*S+hash(gx,gy)*S, y=gy*S+hash(gy,gx+7)*S; const pts=[[x,y]];
         for(let k=0;k<n;k++){ const ll=map.unproject([x,y],z); const w=uv(ll.lat,ll.lng); if(!w) break; const sp=Math.hypot(w[0],w[1]); if(sp<0.3) break; x+=w[0]/sp*step*2.2; y-=w[1]/sp*step*2.2; pts.push([x,y]); }
         if(pts.length<4) continue;
-        for(let k=1;k<pts.length;k++){ const a=k/pts.length; g.strokeStyle=`rgba(255,255,255,${(0.12+0.75*a).toFixed(2)})`; g.lineWidth=0.8+1.0*a; g.beginPath(); g.moveTo(pts[k-1][0]-ox,pts[k-1][1]-oy); g.lineTo(pts[k][0]-ox,pts[k][1]-oy); g.stroke(); }
+        for(let k=1;k<pts.length;k++){ const a=k/pts.length; g.strokeStyle=`rgba(255,255,255,${(0.08+0.55*a).toFixed(2)})`; g.lineWidth=0.8+1.0*a; g.beginPath(); g.moveTo(pts[k-1][0]-ox,pts[k-1][1]-oy); g.lineTo(pts[k][0]-ox,pts[k][1]-oy); g.stroke(); }
       }
       return t;
     }});
-    windL=new WindLayer({pane:'wind',opacity:0.78,updateWhenZooming:false,keepBuffer:1,attribution:'Vind: <a href="https://open-meteo.com/">Open-Meteo</a>'});
+    windL=new WindLayer({pane:'wind',opacity:0.85,updateWhenZooming:false,keepBuffer:1,attribution:'Vind: <a href="https://open-meteo.com/">Open-Meteo</a>'});
   }
   { const tg=document.getElementById('sdToggle'), wt=document.getElementById('wToggle'), lg=document.getElementById('mapLegend'), mp=document.getElementById('map'), wr=document.querySelector('.wrow');
     if(!windL) wt.closest('.row').style.display='none';
