@@ -210,6 +210,30 @@ async function windGrid(){
 }
 let wg=null; try{ await new Promise(r=>setTimeout(r,20000)); wg=await windGrid(); }catch(e){ console.error('Vindrutnät misslyckades', e); }
 d.wg = wg || (prev?.wg?.day===d.FD[0] ? prev.wg : undefined);
+// --- Lavinprognoser från Naturvårdsverket (lavinprognoser.se) ---
+const LAV_AREAS={abisko_riksgransfjallen:['Riksgränsen','Björkliden','Abisko'],vastra_vindelfjallen:['Hemavan','Tärnaby','Rönäs'],sodra_lapplandsfjallen:['Kittelfjäll'],sodra_jamtlandsfjallen:['Åre'],vastra_harjedalsfjallen:['Funäsdalen','Ramundberget','Tänndalen','Tännäskröket']};
+const LAV_NAMES={abisko_riksgransfjallen:'Abisko/Riksgränsfjällen',vastra_vindelfjallen:'Västra Vindelfjällen',sodra_lapplandsfjallen:'Södra Lapplandsfjällen',sodra_jamtlandsfjallen:'Södra Jämtlandsfjällen',vastra_harjedalsfjallen:'Västra Härjedalsfjällen'};
+const stripHtml=h=>String(h||'').replace(/<br\s*\/?>/gi,'\n').replace(/<\/(p|div|li)>/gi,'\n').replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/[ \t]+/g,' ').replace(/\n\s*\n+/g,'\n\n').trim();
+async function lavin(){
+  const out={areas:{},res:{}};
+  for(const [slug,res] of Object.entries(LAV_AREAS)){
+    const url=`https://www.lavinprognoser.se/oversikt-alla-omraden/${slug}/`;
+    try{
+      const r=await fetch(url,{headers:{'User-Agent':'POW-WOW/1.0 github.com/davidgrehn-ui/POW-WOW'}}); if(!r.ok) continue;
+      const h=await r.text(); const i=h.indexOf('window.__model = '); if(i<0) continue;
+      const js=h.slice(i+17,h.indexOf('</script>',i)).trim().replace(/;\s*$/,'');
+      const c=JSON.parse(js).content, f=c.forecast||{};
+      const probs=(f.avalancheProblem?.problems||[]).map(p=>p?.title||p?.heading||p?.name||p?.label||p?.problemName||p?.avalancheProblemName).filter(Boolean).slice(0,4);
+      const txt=stripHtml(f.assessmentContent);
+      out.areas[slug]={name:LAV_NAMES[slug]||slug,url,risk:f.risk??0,label:f.riskLabel||f.riskHeading||'',heading:f.assessmentHeading||'',rec:stripHtml(f.recommendation),text:txt.length>700?txt.slice(0,700).replace(/\s+\S*$/,'')+' …':txt,validTo:f.validTo||'',published:f.publishedDate||'',trend:f.trend?.trendLabel?(f.trend.trendLabel+(f.trend.trendHeading?': '+f.trend.trendHeading:'')):'',problems:probs};
+      for(const n of res) out.res[n]=slug;
+    }catch(e){ console.error('Lavinprognos misslyckades', slug, e.message); }
+    await new Promise(r=>setTimeout(r,800));
+  }
+  return Object.keys(out.areas).length?{t:new Date().toISOString(),...out}:null;
+}
+let lav=null; try{ lav=await lavin(); }catch(e){ console.error('Lavinprognoser misslyckades', e); }
+d.lav = lav || prev?.lav || undefined;
 d.sg = sg || prevSg || undefined;
 d.ens = ens || (prev?.ens && prev.FD?.[0]===d.FD[0] ? prev.ens : undefined);
 writeFileSync(new URL('../data.json', import.meta.url), JSON.stringify(d));

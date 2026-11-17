@@ -54,6 +54,19 @@ h1.brand img{border-radius:12px;box-shadow:0 2px 8px rgba(11,31,77,.25)}
 .pstrip div{border-radius:6px;padding:4px 0;text-align:center;font-size:11px;line-height:1.25;color:var(--ink-2);background:#f1f5fa}
 .pstrip div b{display:block;font-size:12.5px;color:var(--ink)}
 .pstrip div.p2{background:#dbe9fb}.pstrip div.p3{background:#86b6ef}.pstrip div.p4{background:#2a78d6;color:#fff}.pstrip div.p4 b{color:#fff}
+.lav{margin:16px 0 4px;padding:14px 16px;border-radius:14px;background:var(--surface);border:1px solid var(--line)}
+.lav .lh{display:flex;gap:12px;align-items:center}
+.lav .lb{flex:none;width:44px;height:44px;border-radius:10px;display:grid;place-items:center;font:800 22px Inter,system-ui,sans-serif;color:#1b1b1b;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.lav .r0{background:#e3e8ef;color:#556}.lav .r1{background:#ccff66}.lav .r2{background:#ffff00}.lav .r3{background:#ff9900}.lav .r4{background:#ff0000;color:#fff}.lav .r5{background:repeating-linear-gradient(45deg,#000 0 6px,#ff0000 6px 12px);color:#fff;text-shadow:0 0 3px #000}
+.lav .lt{font-size:16px;color:var(--ink)}
+.lav .la{font-size:12.5px;color:var(--ink-2);margin-top:2px}
+.lav p{margin:10px 0 0;font-size:14px;line-height:1.5;color:var(--ink-2)}
+.lav .lp{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.lav .lp span{font-size:12px;font-weight:600;background:#eef3f8;border-radius:999px;padding:3px 9px;color:var(--ink)}
+.lav details{margin-top:10px;font-size:14px}
+.lav details summary{cursor:pointer;color:var(--accent);font-weight:600}
+.lav .lx{white-space:pre-line}
+.lav a.lk{display:inline-block;margin-top:10px;font-weight:700;font-size:14px}
 .notify{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin:10px 0 16px;color:var(--ink-2)}
 .notify summary{cursor:pointer;padding:12px 16px;font-weight:700;color:var(--ink);list-style:none}
 .notify summary::-webkit-details-marker{display:none}
@@ -1128,6 +1141,24 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDetail(); });
 window.addEventListener('hashchange',route);
 function route(){ const id=location.hash.slice(1); const l=L.find(x=>x.id===id); if(l) openDetail(l); else if(current){ ov.classList.remove('open'); document.body.classList.remove('locked'); charts.forEach(c=>c.destroy()); charts=[]; current=null; } }
 
+const esc=t=>String(t??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const LAVN=['Ej bedömd','Liten','Måttlig','Betydande','Stor','Mycket stor'];
+function lavHtml(l){
+  const LV=DATA.lav; const slug=LV&&LV.res&&LV.res[l.n]; const a=slug&&LV.areas[slug]; if(!a) return '';
+  const r=Math.max(0,Math.min(5,+a.risk||0));
+  const MON=['januari','februari','mars','april','maj','juni','juli','augusti','september','oktober','november','december'];
+  const vm=(a.validTo||'').match(/(\d{2})-(\d{2})-(\d{4})/); const vd=vm?`${+vm[1]} ${MON[+vm[2]-1]}`:'';
+  return `<section class="lav" aria-label="Lavinprognos">
+    <div class="lh"><div class="lb r${r}" aria-hidden="true">${r||'?'}</div>
+      <div><div class="lt">Lavinfara: <b>${esc(r?r+' – '+LAVN[r]:(a.label||LAVN[0]))}</b></div>
+      <div class="la">${esc(a.name)} · Naturvårdsverket${r&&a.validTo?' · gäller till '+esc(a.validTo.replace(/^\S+\s/,'')):''}</div></div></div>
+    ${r?(a.heading?`<p><b>${esc(a.heading)}</b></p>`:''):(vd?`<p><b>Prognossäsongen startar ${vd}.</b></p>`:'')}
+    ${r&&a.rec?`<p>${esc(a.rec)}</p>`:''}
+    ${a.problems&&a.problems.length?`<div class="lp">${a.problems.map(p=>`<span>${esc(p)}</span>`).join('')}</div>`:''}
+    ${a.text?`<details><summary>${r?'Läs bedömningen':'Läs mer'}</summary><p class="lx">${esc(a.text)}</p></details>`:''}
+    <a class="lk" href="${esc(a.url)}" target="_blank" rel="noopener">Hela prognosen på lavinprognoser.se →</a>
+  </section>`;
+}
 function openDetail(l){
   current=l; charts.forEach(c=>c.destroy()); charts=[];
   const labels=[...DATA.PD,...DATA.FD].map(wd);
@@ -1148,6 +1179,7 @@ function openDetail(l){
       <div class="kpi"><div class="v">${fmt(l.wmax)} m/s${l.wdir!=null?' <span style="font-size:.7em;font-weight:600">från '+comp(l.wdir)+'</span>':''}</div><div class="l">Max medelvind (byar ${fmt(l.gmax)} m/s)</div></div>
       ${l.ens?`<div class="kpi" style="grid-column:1/-1"><div class="v">${l.ens.p30} %</div><div class="l">Chans för mer än ${LIMIT} cm (≥10 cm: ${l.ens.p10} %). Troligt ${l.ens.q10}–${l.ens.q90} cm, median ${l.ens.q50} cm</div></div>`:''}
     </div>
+    ${lavHtml(l)}
     <div class="charts">
       <div class="ch"><h4>Snöfall per dag</h4><p>Historik: närmaste mätstation, uppskattat från nederbörd och temperatur. Prognos: SMHI och YR.</p>
         <div class="legend"><span><i class="sw" style="background:var(--s-obs)"></i>Uppmätt</span><span><i class="sw" style="background:var(--s-smhi)"></i>SMHI</span><span><i class="sw" style="background:var(--s-yr)"></i>YR</span></div>
@@ -1226,7 +1258,7 @@ document.getElementById('foot').innerHTML = `
   Nysnö räknas som nederbörd i fast form, 1 mm vatten ≈ 1 cm snö (SMHI anger andel fast nederbörd; för YR används temperaturen).
   Faktisk nysnö kan bli mer i kallt, torrt väder och mindre i blöt snö. Historik och snödjup kommer från närmaste aktiva SMHI-station, för de norska orterna från MET Norges stationer (Frost API)
   – stationerna kan ligga en bit från skidområdet och lägre i terrängen. Larmgräns: över ${LIMIT} cm enligt SMHI eller YR under 10 dagar.
-  Klicka på en ort för grafer. Källor: <a href="https://www.smhi.se/data" target="_blank" rel="noopener">SMHI Öppna data</a> · <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (snödjupskartan, modellberäknat i ca 25 km rutor, samt sannolikheter från ECMWF:s ensembleprognos med 51 scenarier) ·
+  Klicka på en ort för grafer. Källor: <a href="https://www.smhi.se/data" target="_blank" rel="noopener">SMHI Öppna data</a> · <a href="https://www.lavinprognoser.se/" target="_blank" rel="noopener">Naturvårdsverket</a> (lavinprognoser) · <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> (snödjupskartan, modellberäknat i ca 25 km rutor, samt sannolikheter från ECMWF:s ensembleprognos med 51 scenarier) ·
   <a href="https://www.yr.no" target="_blank" rel="noopener">YR (met.no)</a>.`;
 })();
 </script>
