@@ -1137,6 +1137,7 @@ function snowColor(c){ return c>30?['#eb6834','#fff']:c>=15?['#2a78d6','#fff']:c
   }
   { const tg=document.getElementById('sdToggle'), wt=document.getElementById('wToggle'), lg=document.getElementById('mapLegend'), mp=document.getElementById('map'), wr=document.querySelector('.wrow');
     if(!windL) wt.closest('.row').style.display='none';
+    if(WG&&WG.day){ const wtx=document.querySelector('.wtxt'); if(wtx&&WG.day!==DATA.FD[0]){ const dd=new Date(WG.day+'T12:00:00'); wtx.textContent='Max medelvind '+dd.toLocaleDateString('sv-SE',{weekday:'short',day:'numeric',month:'numeric'})+', m/s'; } }
     const setSnow=on=>{ if(!snowL) return; on?snowL.addTo(map):map.removeLayer(snowL); tg.setAttribute('aria-pressed',on); lg.classList.toggle('sd-off',!on); };
     const setWind=on=>{ if(!windL) return; on?windL.addTo(map):map.removeLayer(windL); if(partL) (on?partL.addTo(map):map.removeLayer(partL)); mp.classList.toggle('wind',on); wt.setAttribute('aria-pressed',on); wr.style.display=on?'':'none'; };
     tg.addEventListener('click',()=>{ const on=!(snowL&&map.hasLayer(snowL)); setSnow(on); if(on) setWind(false); });

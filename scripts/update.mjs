@@ -202,14 +202,16 @@ async function windGrid(){
     const ch=[...Array(Math.min(100,N-b)).keys()].map(i=>b+i);
     const u=`https://api.open-meteo.com/v1/forecast?latitude=${ch.map(k=>(la0+Math.floor(k/nlo)*dla).toFixed(2)).join(',')}&longitude=${ch.map(k=>(lo0+(k%nlo)*dlo).toFixed(2)).join(',')}&daily=wind_speed_10m_max,wind_direction_10m_dominant&wind_speed_unit=ms&timezone=Europe%2FStockholm&forecast_days=2`;
     let j=null;
-    for(let t=0;t<3&&!j;t++){ try{const r=await fetch(u,{headers:{'User-Agent':'POW-WOW/1.0 github.com/davidgrehn-ui/POW-WOW'}}); if(r.ok) j=await r.json(); else await sleep(15000);}catch(e){await sleep(5000)} }
+    for(let t=0;t<4&&!j;t++){ try{const r=await fetch(u,{headers:{'User-Agent':'POW-WOW/1.0 github.com/davidgrehn-ui/POW-WOW'}}); if(r.ok) j=await r.json(); else { console.error('Vindrutnät: HTTP',r.status,'försök',t+1); await sleep(30000); } }catch(e){ console.error('Vindrutnät:',e.message); await sleep(5000);} }
     (Array.isArray(j)?j:(j?[j]:[])).forEach((x,i)=>{ const D=x?.daily; if(!D) return; day=D.time[1]; const sp=D.wind_speed_10m_max[1], dr=D.wind_direction_10m_dominant[1]; if(sp!=null&&dr!=null){ s[ch[i]]=Math.round(sp*10)/10; dd[ch[i]]=Math.round(dr); ok++; } });
-    await sleep(4000);
+    await sleep(11000);
   }
+  console.log('Vindrutnät:',ok,'av',N,'punkter');
   return ok>N*0.8 ? {t:new Date().toISOString(),day,la0,lo0,dla,dlo,nla,nlo,s,d:dd} : null;
 }
-let wg=null; try{ await new Promise(r=>setTimeout(r,20000)); wg=await windGrid(); }catch(e){ console.error('Vindrutnät misslyckades', e); }
-d.wg = wg || (prev?.wg?.day===d.FD[0] ? prev.wg : undefined);
+let wg=null; try{ await new Promise(r=>setTimeout(r,65000)); wg=await windGrid(); }catch(e){ console.error('Vindrutnät misslyckades', e); }
+if(!wg) console.error('Behåller tidigare vindrutnät.');
+d.wg = wg || prev?.wg || undefined;
 // --- Lavinprognoser från Naturvårdsverket (lavinprognoser.se) ---
 const LAV_AREAS={abisko_riksgransfjallen:['Riksgränsen','Björkliden','Abisko'],vastra_vindelfjallen:['Hemavan','Tärnaby','Rönäs'],sodra_lapplandsfjallen:['Kittelfjäll'],sodra_jamtlandsfjallen:['Åre'],vastra_harjedalsfjallen:['Funäsdalen','Ramundberget','Tänndalen','Tännäskröket']};
 const LAV_NAMES={abisko_riksgransfjallen:'Abisko/Riksgränsfjällen',vastra_vindelfjallen:'Västra Vindelfjällen',sodra_lapplandsfjallen:'Södra Lapplandsfjällen',sodra_jamtlandsfjallen:'Södra Jämtlandsfjällen',vastra_harjedalsfjallen:'Västra Härjedalsfjällen'};
